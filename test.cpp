@@ -7,6 +7,6 @@ int main() {
 	initscr();
 	// allow for tracking input from special keyboard keys (backspace, delete, etc.)
 	keypad(stdscr, true);
-	
+	endwin();
 	return 0;
 }
