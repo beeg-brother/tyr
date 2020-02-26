@@ -1,4 +1,5 @@
 #include <curses.h>
+#include <clocale>
 
 struct Cursor {
     int x, y;
@@ -21,23 +22,28 @@ class Editor : protected Window{
             Window::width = w;
             Window::height = h;
             Window::win = newwin(Window::height, Window::width, y0, x0);
-            waddch(stdscr, 'a');
-            wmove(Window::win, 1,1);
-            wborder(stdscr, 0, 0, 0, 0, 0, 0, 0, 0);
-            waddch(stdscr, 'a');
+            wborder(Window::win, 0, 0, 0, 0, 0, 0, 0, 0);
             wrefresh(Window::win);
-            wrefresh(stdscr);
+            
         }
         Cursor cursor;
         void resize(int, int);
 };
 
 int main() {
+	// sets the locale so that terminals use UTF8 encoding
+	std::setlocale(LC_ALL, "en_US.UTF-8");
+	// initializes curses
     initscr();
+    // refreshes the screen
+    refresh();
     cbreak();
     noecho();
-    Editor ed (10, 10, 0, 0);
+    // creates the editor screen
+    Editor ed (10, 10, 1, 1);
+
     getch();
+    // close curses
     endwin();
     return 0;
 }
