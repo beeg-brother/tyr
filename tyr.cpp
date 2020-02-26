@@ -20,7 +20,7 @@ class Window {
 class Editor : protected Window{
     protected:
     public:
-        Editor(int w, int h, int x0, int y0){
+        Editor(int h, int w, int x0, int y0){
             Window::width = w;
             Window::height = h;
             Window::win = newwin(Window::height, Window::width, y0, x0);
@@ -47,7 +47,12 @@ int main() {
     cbreak();
     noecho();
     // creates the editor screen
-    Editor ed (COLS-20, LINES - 1, 20, 0);
+    Editor ed (LINES-1, COLS-20, 20, 0);
+    Editor fs (LINES-1, 21, 0, 0);
+    //update the panel stacking
+    update_panels();
+    doupdate();
+    
     getch();
     // close curses
     endwin();
