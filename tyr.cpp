@@ -36,10 +36,26 @@ class Editor : protected Window{
         void resize(int, int);
 };
 
+class FileViewer : protected Window{
+    protected:
+    public:
+        FileViewer(int h, int w, int x0, int y0){
+            Window::width = w;
+            Window::height = h;
+            Window::win = newwin(Window::height, Window::width, y0,x0);
+
+            wborder(Window::win, 0, 0, 0, 0, 0, 0, 0, 0);
+
+            Window::pan = new_panel(Window::win);
+            wrefresh(Window::win);
+        }
+        Cursor cursor;
+        void resize(int, int);
+};
+
 int main() {
 	// sets the locale so that terminals use UTF8 encoding
-	//std::setlocale(LC_ALL, "en_US.UTF-8");
-	std::setlocale(LC_ALL, "en_US.UTF-8");
+    //std::setlocale(LC_ALL, "en_US.UTF-8");
 	// initializes curses
     initscr();
     // refreshes the screen
@@ -48,7 +64,7 @@ int main() {
     noecho();
     // creates the editor screen
     Editor ed (LINES-1, COLS-20, 20, 0);
-    Editor fs (LINES-1, 21, 0, 0);
+    FileViewer fs (LINES-1, 21, 0, 0);
     //update the panel stacking
     update_panels();
     doupdate();
