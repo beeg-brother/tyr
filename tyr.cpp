@@ -1,6 +1,12 @@
 #include <curses.h>
 #include <panel.h>
 #include <clocale>
+#include <string>
+#include <menu.h>
+#include <experimental/filesystem>
+#include <vector>
+
+namespace fs = std::experimental::filesystem;
 
 struct Cursor {
     int x, y;
@@ -57,8 +63,26 @@ class FileViewer : protected Window{
         }
 };
 
+std::vector<std::string> getDirFiles(std::string path){
+    // create the list of files
+    std::vector<std::string> files;
+    // get the other files in the directory
+    for (const auto & entry : fs::directory_iterator(path)){
+        files.push_back(entry.path());
+    }
+    return files;
+}
+
 void focusOnFileViewer(FileViewer fs){
-    waddstr(fs.getWindow(),"Hey whats poppin gamers");
+    // the base path (will have to be based off of pwd)
+    std::string path = "./";
+    std::vector<std::string> files = getDirFiles(path);
+
+    for (std::string i : files){
+        const char *cstr = i.c_str();
+        waddstr(fs.getWindow(), cstr);
+        waddstr(fs.getWindow(), "\n");
+    }
     // when we switch to the file viewer we want to hide the cursor
     curs_set(0);
     // refresh the file viewer window
@@ -68,10 +92,11 @@ void focusOnFileViewer(FileViewer fs){
 
 int main() {
 	// sets the locale so that terminals use UTF8 encoding
-    std::setlocale(LC_ALL, "en_US.UTF-8");
+    //std::setlocale(LC_ALL, "en_US.UTF-8");
 	// initializes curses
     initscr();
     // refreshes the screen
+    keypad(stdscr, TRUE);
     refresh();
     cbreak();
     noecho();
@@ -81,7 +106,9 @@ int main() {
     //update the panel stacking
     update_panels();
     doupdate();
+
     focusOnFileViewer(fs);
+    
     getch();
     // close curses
     endwin();
