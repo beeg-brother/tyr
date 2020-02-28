@@ -1,6 +1,7 @@
 #include <curses.h>
 #include <panel.h>
 #include <clocale>
+#include <string>
 
 struct Cursor {
     int x, y;
@@ -36,7 +37,7 @@ class Editor : protected Window{
     public:
         Editor(int h, int w, int y0, int x0){
             Window::create_windows(h, w, y0, x0);
-       }
+        }
         Cursor cursor;
         void resize(int, int);
 
@@ -54,6 +55,14 @@ class FileViewer : protected Window{
 
         WINDOW* getWindow(){
             return Window::win;
+        }
+};
+
+class Dialog : protected Window{
+    protected:
+    public:
+        Dialog(std::string str){
+            
         }
 };
 
