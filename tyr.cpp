@@ -10,29 +10,33 @@ struct Cursor {
 class Window {
     protected:
         int width, height;
-        WINDOW *win;
         PANEL *pan;
+        WINDOW *win;
+        PANEL *border_pan;
+        WINDOW *border_win;
     public:
         void resize(int, int);
         void onFocus();
+        void create_windows(int h, int w, int y0, int x0){
+            width = w;
+            height = h;
+            win = newwin(h - 2, w - 2, y0 + 1, x0 + 1);
+            pan = new_panel(win);
+            border_win = newwin(h, w, y0, x0);
+            wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+            border_pan = new_panel(border_win);
+            wrefresh(border_win);
+            wrefresh(win);
+        }
 
 };
 
 class Editor : protected Window{
     protected:
     public:
-        Editor(int h, int w, int x0, int y0){
-            Window::width = w;
-            Window::height = h;
-            Window::win = newwin(Window::height, Window::width, y0, x0);
-            //draws the border around the window
-            wborder(Window::win, 0, 0, 0, 0, 0, 0, 0, 0);
-            // make the panel that the window is attached to:
-            Window::pan = new_panel(Window::win);
-            // refresh the window
-            wrefresh(Window::win);
-            
-        }
+        Editor(int h, int w, int y0, int x0){
+            Window::create_windows(h, w, y0, x0);
+       }
         Cursor cursor;
         void resize(int, int);
 
@@ -42,15 +46,8 @@ class Editor : protected Window{
 class FileViewer : protected Window{
     protected:
     public:
-        FileViewer(int h, int w, int x0, int y0){
-            Window::width = w;
-            Window::height = h;
-            Window::win = newwin(Window::height, Window::width, y0,x0);
-
-            wborder(Window::win, 0, 0, 0, 0, 0, 0, 0, 0);
-
-            Window::pan = new_panel(Window::win);
-            wrefresh(Window::win);
+        FileViewer(int h, int w, int y0, int x0){
+            Window::create_windows(h, w, y0, x0);
         }
         Cursor cursor;
         void resize(int, int);
@@ -61,7 +58,6 @@ class FileViewer : protected Window{
 };
 
 void focusOnFileViewer(FileViewer fs){
-    wmove(fs.getWindow(), 1,1);
     waddstr(fs.getWindow(),"Hey whats poppin gamers");
     // when we switch to the file viewer we want to hide the cursor
     curs_set(0);
@@ -80,7 +76,7 @@ int main() {
     cbreak();
     noecho();
     // creates the editor screen
-    Editor ed (LINES-1, COLS-20, 20, 0);
+    Editor ed (LINES-1, COLS-20, 0, 20);
     FileViewer fs (LINES-1, 21, 0, 0);
     //update the panel stacking
     update_panels();
