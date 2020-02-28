@@ -14,6 +14,7 @@ class Window {
         PANEL *pan;
     public:
         void resize(int, int);
+        void onFocus();
 
 };
 
@@ -34,6 +35,8 @@ class Editor : protected Window{
         }
         Cursor cursor;
         void resize(int, int);
+
+        void onFocus();
 };
 
 class FileViewer : protected Window{
@@ -51,7 +54,21 @@ class FileViewer : protected Window{
         }
         Cursor cursor;
         void resize(int, int);
+
+        WINDOW* getWindow(){
+            return Window::win;
+        }
 };
+
+void focusOnFileViewer(FileViewer fs){
+    wmove(fs.getWindow(), 1,1);
+    waddstr(fs.getWindow(),"Hey whats poppin gamers");
+    // when we switch to the file viewer we want to hide the cursor
+    curs_set(0);
+    // refresh the file viewer window
+    wrefresh(fs.getWindow());
+
+}
 
 int main() {
 	// sets the locale so that terminals use UTF8 encoding
@@ -68,9 +85,10 @@ int main() {
     //update the panel stacking
     update_panels();
     doupdate();
-    
+    focusOnFileViewer(fs);
     getch();
     // close curses
     endwin();
     return 0;
 }
+
