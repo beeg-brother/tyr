@@ -1,12 +1,13 @@
+
 #include <curses.h>
 #include <panel.h>
 #include <clocale>
 #include <string>
 #include <menu.h>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <vector>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 struct Cursor {
     int x, y;
@@ -77,6 +78,7 @@ void focusOnFileViewer(FileViewer fs){
     // the base path (will have to be based off of pwd)
     std::string path = "./";
     std::vector<std::string> files = getDirFiles(path);
+    int num_choices = files.size();
 
     for (std::string i : files){
         const char *cstr = i.c_str();

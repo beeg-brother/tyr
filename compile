@@ -1,0 +1,2 @@
+#!/bin/bash
+g++-8 -Wall -g  tyr.cpp -lncurses -lpanel -lmenu -std=c++17 -lstdc++fs
