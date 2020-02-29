@@ -37,6 +37,9 @@ class Editor : protected Window{
     public:
         Editor(int h, int w, int y0, int x0){
             Window::create_windows(h, w, y0, x0);
+            cursor = Cursor();
+            cursor.x = 0;
+            cursor.y = 0;
         }
         WINDOW* getWindow(){
             return Window::win;
@@ -45,6 +48,33 @@ class Editor : protected Window{
         void resize(int, int);
 
         void onFocus();
+
+        void handleInput(int c){
+            switch (c){
+                case KEY_RIGHT:
+                    cursor.x += 1;
+                    wmove(Window::win, cursor.y, cursor.x);
+                    break;
+                case KEY_LEFT:
+                    cursor.x -= 1;
+                    wmove(Window::win, cursor.y, cursor.x);
+                    break;
+                case KEY_UP:
+                    cursor.y -= 1;
+                    wmove(Window::win, cursor.y, cursor.x);
+                    break;
+                case KEY_DOWN:
+                    cursor.y += 1;
+                    wmove(Window::win, cursor.y, cursor.x);
+                    break;
+                default:
+                    waddch(Window::win, c);
+                    cursor.x += 1;
+                    wmove(Window::win, cursor.y, cursor.x);
+                    break;
+            }
+            wrefresh(Window::win);
+        }
 };
 
 class FileViewer : protected Window{
@@ -107,15 +137,18 @@ int main() {
     refresh();
     cbreak();
     noecho();
+    keypad(stdscr, true);
     // creates the editor screen
     Editor ed (LINES-1, COLS-20, 0, 20);
     FileViewer fs (LINES-1, 21, 0, 0);
-    Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
+    //Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
     //update the panel stacking
     update_panels();
     doupdate();
-    focusOnFileViewer(fs);
-    getch();
+    //focusOnFileViewer(fs);
+    while(1){
+        ed.handleInput(getch());
+    };
     // close curses
     endwin();
     return 0;
