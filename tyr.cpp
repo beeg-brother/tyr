@@ -1,12 +1,13 @@
 
 #include <curses.h>
 #include <panel.h>
+#include <iostream>
 #include <clocale>
 #include <string>
 #include <menu.h>
 #include <filesystem>
 #include <vector>
-
+#include <assert.h>
 namespace fs = std::filesystem;
 
 struct Cursor {
@@ -53,6 +54,7 @@ class Editor : protected Window{
 class FileViewer : protected Window{
     protected:
     public:
+
         FileViewer(int h, int w, int y0, int x0){
             Window::create_windows(h, w, y0, x0);
         }
@@ -62,6 +64,7 @@ class FileViewer : protected Window{
         WINDOW* getWindow(){
             return Window::win;
         }
+
 };
 
 std::vector<std::string> getDirFiles(std::string path){
@@ -77,14 +80,24 @@ std::vector<std::string> getDirFiles(std::string path){
 void focusOnFileViewer(FileViewer fs){
     // the base path (will have to be based off of pwd)
     std::string path = "./";
+    // get a vector of the files in the path
     std::vector<std::string> files = getDirFiles(path);
+    // get the number of total files
     int num_choices = files.size();
-
-    for (std::string i : files){
-        const char *cstr = i.c_str();
-        waddstr(fs.getWindow(), cstr);
-        waddstr(fs.getWindow(), "\n");
+    // make an empty vector of menu items
+    ITEM* menu_choices[num_choices] = {};
+    // populate the menu array
+    for (int i = 0; i < num_choices-1; i++){
+        const char *cstr = files[i].c_str();
+        menu_choices[i] = new_item(cstr,"");
+        
     }
+    // create a new menu
+    MENU *menu = new_menu(menu_choices);
+    
+    // add it to the filesystem window
+    set_menu_win(menu, fs.getWindow());
+    post_menu(menu);
     // when we switch to the file viewer we want to hide the cursor
     curs_set(0);
     // refresh the file viewer window
