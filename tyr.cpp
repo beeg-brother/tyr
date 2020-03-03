@@ -21,7 +21,7 @@ class Window {
         void create_windows(int h, int w, int y0, int x0){
             width = w;
             height = h;
-            win = newwin(h - 2, w - 2, y0 + 1, x0 + 1);
+            win = newwin(h - 2, w - 5, y0 + 1, x0 + 4);
             pan = new_panel(win);
             border_win = newwin(h, w, y0, x0);
             wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -34,16 +34,19 @@ class Window {
 
 class Editor : protected Window{
     protected:
+        int lineNum = 1;
     public:
         Editor(int h, int w, int y0, int x0){
             Window::create_windows(h, w, y0, x0);
             cursor = Cursor();
             cursor.x = 0;
             cursor.y = 0;
+            mvwaddstr(Window::border_win, cursor.y+1, 1, std::to_string(lineNum).c_str());
         }
         WINDOW* getWindow(){
             return Window::win;
         }
+
         Cursor cursor;
         void resize(int, int);
 
@@ -67,12 +70,20 @@ class Editor : protected Window{
                     cursor.y += 1;
                     wmove(Window::win, cursor.y, cursor.x);
                     break;
+                case ';':
+                    cursor.y +=1;
+                    cursor.x = -1;
+                    wmove(Window::win, cursor.y, cursor.x);
+                    lineNum+=1;
+                    mvwaddstr(Window::border_win, cursor.y+1, 1, std::to_string(lineNum).c_str());
+                    break;
                 default:
                     waddch(Window::win, c);
                     cursor.x += 1;
                     wmove(Window::win, cursor.y, cursor.x);
                     break;
             }
+            wrefresh(Window::border_win);
             wrefresh(Window::win);
         }
 };
