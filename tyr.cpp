@@ -3,8 +3,18 @@
 #include <clocale>
 #include <string>
 
+
+/* notes on using Cursors:
+   line_num should refer to the current line, like normal
+   HOWEVER: line_position should refer to the "previous" character
+   aka: a Cursor with line_position 0 would add a character at position 0 in the string.
+*/
 struct Cursor {
-    int x, y;
+    // position on screen
+    int screen_x, screen_y;
+    // line_num means the nth line in the text (aka the nth element in the string array of the editor)
+    // line_position means the position of the cursor in this line (x-value ish)
+    int line_num, line_position;
 };
 
 class Window {
@@ -38,9 +48,11 @@ class Editor : protected Window{
         Editor(int h, int w, int y0, int x0){
             Window::create_windows(h, w, y0, x0);
             cursor = Cursor();
-            cursor.x = 0;
-            cursor.y = 0;
-            mvwaddstr(Window::border_win, cursor.y+1, 1, std::to_string(1).c_str());
+            cursor.screen_x = 0;
+            cursor.screen_y = 0;
+            mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(1).c_str());
+            *strs = new std::string*[1];
+            *strs[0] = new std::string();
         }
 
         WINDOW* getWindow(){
@@ -55,35 +67,46 @@ class Editor : protected Window{
         void handleInput(int c){
             switch (c){
                 case KEY_RIGHT:
-                    cursor.x += 1;
-                    wmove(Window::win, cursor.y, cursor.x);
+                    if((&strs[cursor.line_num]).size() > cursor.screen_x){ // check if its valid to move over a character
+                        cursor.screen_x += 1;
+                        cursor.line_position += 1;
+                        wmove(Window::win, cursor.screen_y, cursor.screen_x);
+                    };
+                        // if not, do nothing
+                        // TODO: try to shift the line over to continue the view.
                     break;
                 case KEY_LEFT:
-                    cursor.x -= 1;
-                    wmove(Window::win, cursor.y, cursor.x);
+                    cursor.screen_x -= 1;
+                    cursor.line_position -= 1;
+                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case KEY_UP:
-                    cursor.y -= 1;
-                    wmove(Window::win, cursor.y, cursor.x);
+                    cursor.screen_y -= 1;
+                    cursor.line_num -= 1;
+                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case KEY_DOWN:
-                    cursor.y += 1;
-                    wmove(Window::win, cursor.y, cursor.x);
+                    cursor.screen_y += 1;
+                    cursor.line_num += 1;
+                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case 10: // ENTER KEY
-                    cursor.y +=1;
-                    cursor.x = 0;
-                    wmove(Window::win, cursor.y, cursor.x);
-                    mvwaddstr(Window::border_win, cursor.y+1, 1, std::to_string(cursor.y+1).c_str());
+                    cursor.screen_y +=1;
+                    cursor.screen_x = 0;
+                    // TODO: add string array copying, inserting new line
+                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
+                    mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
                 case 127: // BACKSPACE KEY
-                    cursor.x -=1;
-                    wmove(Window::win, cursor.y, cursor.x);
+                    cursor.screen_x -=1;
+                    // TODO: remove previous letter in the active string
+                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
                     waddch(Window::win, c);
-                    cursor.x += 1;
-                    wmove(Window::win, cursor.y, cursor.x);
+                    cursor.screen_x += 1;
+                    // TODO: add letter in to the active string using string copying
+                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
             }
             wrefresh(Window::border_win);
@@ -94,7 +117,10 @@ class Editor : protected Window{
         // see: https://www.geeksforgeeks.org/difference-between-pointer-to-an-array-and-array-of-pointers/
         // and: http://www.fredosaurus.com/notes-cpp/newdelete/50dynamalloc.html
         // i'm using a pointer to an array because it allows for dynamic length of the array
-        // i'm using an array of pointers because copying pointers from one array to another should be 100x more efficient than copying full strings
+        // i'm using an array of pointers because copying pointers from one array to another should be 100x
+        // more efficient than copying full strings
+        // i can resize strings nicely:
+        // see http://www.cplusplus.com/reference/string/string/insert/
         // also, keep this as the last declaration in the class. yes.
         std::string* *strs[];
 };
