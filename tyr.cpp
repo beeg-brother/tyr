@@ -7,7 +7,6 @@ struct Cursor {
     int x, y;
 };
 
-
 class Window {
     protected:
         int width, height;
@@ -43,6 +42,7 @@ class Editor : protected Window{
             cursor.y = 0;
             mvwaddstr(Window::border_win, cursor.y+1, 1, std::to_string(1).c_str());
         }
+
         WINDOW* getWindow(){
             return Window::win;
         }
@@ -89,6 +89,14 @@ class Editor : protected Window{
             wrefresh(Window::border_win);
             wrefresh(Window::win);
         }
+
+        // this is a pointer to an array of pointers. yes its terrible.
+        // see: https://www.geeksforgeeks.org/difference-between-pointer-to-an-array-and-array-of-pointers/
+        // and: http://www.fredosaurus.com/notes-cpp/newdelete/50dynamalloc.html
+        // i'm using a pointer to an array because it allows for dynamic length of the array
+        // i'm using an array of pointers because copying pointers from one array to another should be 100x more efficient than copying full strings
+        // also, keep this as the last declaration in the class. yes.
+        std::string* *strs[];
 };
 
 class FileViewer : protected Window{
@@ -134,12 +142,23 @@ class Dialog : protected Window{
         }
 };
 
+Editor *ed;
+FileViewer *fs;
+
 void focusOnFileViewer(FileViewer fs){
     waddstr(fs.getWindow(),"Hey whats poppin gamers");
     // when we switch to the file viewer we want to hide the cursor
     curs_set(0);
     // refresh the file viewer window
     wrefresh(fs.getWindow());
+}
+
+void mainLoop(){
+    int c;
+    while(1){
+        c = getch();
+        ed->handleInput(c);
+    };
 }
 
 int main() {
@@ -153,16 +172,14 @@ int main() {
     noecho();
     keypad(stdscr, true);
     // creates the editor screen
-    Editor ed (LINES-1, COLS-20, 0, 20);
-    FileViewer fs (LINES-1, 21, 0, 0);
+    ed = new Editor(LINES-1, COLS-20, 0, 20);
+    fs = new FileViewer(LINES-1, 21, 0, 0);
     //Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
     //update the panel stacking
     update_panels();
     doupdate();
     //focusOnFileViewer(fs);
-    while(1){
-        ed.handleInput(getch());
-    };
+    mainLoop();
     // close curses
     endwin();
     return 0;
