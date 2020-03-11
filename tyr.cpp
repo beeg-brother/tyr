@@ -60,7 +60,7 @@ std::vector<std::string> getDirFiles(std::string path){
 	std::vector<std::string> files;
 	// get the other files in the directory
 	for (const auto & entry : fs::directory_iterator(path)){
-		files.push_back(entry.path());
+		files.push_back(entry.path().filename());
 	}
 	return files;
 }
