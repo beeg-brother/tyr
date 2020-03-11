@@ -4,6 +4,7 @@
 #include <iostream>
 #include <clocale>
 #include <string>
+#include "filemenu.h"
 #include <menu.h>
 #include <filesystem>
 #include <vector>
@@ -12,7 +13,7 @@
 
 
 
-namespace fs = std::filesystem;
+namespace fsys = std::filesystem;
 
 struct Cursor {
 	int x, y;
@@ -59,7 +60,7 @@ std::vector<std::string> getDirFiles(std::string path){
 	// create the list of files
 	std::vector<std::string> files;
 	// get the other files in the directory
-	for (const auto & entry : fs::directory_iterator(path)){
+	for (const auto & entry : fsys::directory_iterator(path)){
 		files.push_back(entry.path().filename());
 	}
 	return files;
@@ -115,45 +116,48 @@ class FileViewer : protected Window{
 			for (int i = expandedIndex + num_new_files + 1; i <= num_new_files + item_count(menu); i++){
 				new_menu_choices[i] = menu_choices[i - num_new_files];
 			}
-
 			new_menu_choices[item_count(menu) + num_new_files + 1] = (ITEM *) NULL;
+			
 			unpost_menu(menu);
 			set_menu_items(menu, new_menu_choices);
 			post_menu(menu);
+			set_current_item(menu, new_menu_choices[expandedIndex]);
 			wrefresh(Window::win);
 		}
-
+		void resizeMenu(int rows, int cols){
+			menu_format(menu, &rows, &cols);
+			wrefresh(Window::win);
+		}
 };
 
 
 
 void focusOnFileViewer(FileViewer fs){
 	// the base path (will have to be based off of pwd)
-	std::string path = "./";
+	fsys::path cwd = fsys::current_path(); 
+	std::string path = cwd.u8string();
 	// get a vector of the files in the path
 	std::vector<std::string> files = getDirFiles(path);
 	// get the number of total files
 	int num_choices = files.size();
 	// make an empty vector of menu items
-	ITEM* menu_choices[num_choices] = {};
+	ITEM* menu_choices[num_choices + 1] = {};
 	// populate the menu array
 	for (int i = 0; i < num_choices-1; i++){
-		const fs::path fspath(files[i]);
+		const fsys::path fspath(files[i]);
 		const char *cstr = files[i].c_str();
 
 		// make a new menu item that's the name of the file
-		if (fs::is_directory(fspath)){
+		if (fsys::is_directory(fspath)){
 			menu_choices[i] = new_item(cstr,">");    
 		}
-		if (fs::is_regular_file(fspath)){
+		if (fsys::is_regular_file(fspath)){
 			menu_choices[i] = new_item(cstr,"");   
 		}
-		
 	}
-	
-	
+	menu_choices[num_choices] = (ITEM *) NULL;
 	fs.setMenu(menu_choices);
-	
+	ITEM **items;
 	// when we switch to the file viewer we want to hide the cursor
 	curs_set(0);
 	// refresh the file viewer window
@@ -171,22 +175,24 @@ void focusOnFileViewer(FileViewer fs){
 				break;
 			// when the user selects a file from the menu
 			case KEY_RIGHT:
+				items = menu_items(fs.getMenu());
+
 				const char* name = item_name(current_item(fs.getMenu()));
 				std::string file_name (name);
-				const fs::path clicked_path (file_name);
+				const fsys::path clicked_path (file_name);
 
-				if (fs::is_directory(clicked_path)){
+				if (fsys::is_directory(clicked_path)){
 					
 					//expand the files inside the sub-directory
-					fs.expandDirectory(menu_choices, file_name);
+					fs.expandDirectory(items, file_name);
+					items = menu_items(fs.getMenu());
 					wrefresh(fs.getWindow());
 				}
-				if (fs::is_regular_file(clicked_path)){
+				if (fsys::is_regular_file(clicked_path)){
 					// open the file in the editor
 
 					wrefresh(fs.getWindow());
 				}
-
 		}
 	}
 
@@ -204,8 +210,8 @@ int main() {
 	noecho();
 	
 	// creates the editor screen
-	Editor ed (LINES-1, COLS-50, 0, 50);
-	FileViewer fs (LINES-1, 51, 0, 0);
+	Editor ed (LINES-1, COLS-20, 0, 20);
+	FileViewer fs (LINES-1, 21, 0, 0);
 	//update the panel stacking
 	update_panels();
 	doupdate();
