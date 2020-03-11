@@ -32,7 +32,7 @@ class Window {
         void create_windows(int h, int w, int y0, int x0){
             width = w;
             height = h;
-            int lineNumLen = 4;//how much space we give the line numbers
+            int lineNumLen = 4; //how much space we give the line numbers
             win = newwin(h - 2, w - 2 - lineNumLen, y0 + 1, x0 + 1 + lineNumLen);
             pan = new_panel(win);
             border_win = newwin(h, w, y0, x0);
@@ -64,8 +64,12 @@ class Editor : protected Window{
             *strs[0] = new std::string();
         }
 
-        WINDOW* getWindow(){
+        WINDOW* getEditorWindow(){
             return Window::win;
+        }
+
+        PANEL* getEditorPanel(){
+            return Window::pan;
         }
 
         Cursor cursor;
@@ -74,7 +78,6 @@ class Editor : protected Window{
         void onFocus();
 
         void handleInput(int c){
-            return;
             switch (c){
                 case KEY_RIGHT:
                     if((*(*strs)[cursor.line_num]).size() > cursor.screen_x){ // check if its valid to move over a character
@@ -131,7 +134,7 @@ class Editor : protected Window{
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case 10: // ENTER KEY
-                    cursor.screen_y +=1;
+                    cursor.screen_y += 1;
                     cursor.screen_x = 0;
                     // TODO: add string array copying, inserting new line
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
@@ -143,12 +146,23 @@ class Editor : protected Window{
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
-                    waddch(Window::win, c);
+                    (*(*strs)[cursor.line_num]).insert(cursor.line_position, 1, (char) c);
+                    const char* a = (*(*strs)[cursor.line_num]).data();
+                    mvwaddnstr(Window::border_win, 3, 0, std::to_string(cursor.screen_y).data(), 1);
+                    mvwaddnstr(Window::border_win, 4, 0, std::to_string(cursor.screen_x).data(), 1);
+                    wrefresh(Window::border_win);
+                    mvwaddnstr(Window::win, cursor.screen_y+1, cursor.screen_x+1, (*(*strs)[cursor.line_num]).data(), 1);
+                    wrefresh(Window::win);
+                    mvwaddch(Window::border_win, 0, 0, 'b');
+                    wrefresh(Window::border_win);
                     cursor.screen_x += 1;
-                    // TODO: add letter in to the active string using string copying
+                    cursor.line_position += 1;
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
             }
+            
+            //mvwaddstr(Window::win, cursor.screen_y, cursor.screen_x, (*(*strs)[cursor.line_num]).data());
+            //wmove(Window::win, cursor.screen_y, cursor.screen_x);
             wrefresh(Window::border_win);
             wrefresh(Window::win);
         }
