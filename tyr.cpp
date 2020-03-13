@@ -4,7 +4,7 @@
 #include <iostream>
 #include <clocale>
 #include <string>
-#include "filemenu.h"
+#include "filemenu.cpp"
 #include <menu.h>
 #include <filesystem>
 #include <vector>
@@ -14,6 +14,7 @@
 
 
 namespace fsys = std::filesystem;
+using namespace filemenu;
 
 struct Cursor {
 	int x, y;
@@ -49,7 +50,7 @@ class Editor : protected Window{
 	public:
 		Editor(int h, int w, int y0, int x0){
 			Window::create_windows(h, w, y0, x0);
-	   }
+		}
 		Cursor cursor;
 		void resize(int, int);
 
@@ -74,7 +75,10 @@ class FileViewer : protected Window{
 			Window::create_windows(h, w, y0, x0);
 		}
 		Cursor cursor;
+		// built-in curses implementations of a menu
 		MENU * menu;
+		// my new version  of menus
+		Menu* nmenu = new Menu();
 		void resize(int, int);
 
 		WINDOW* getWindow(){
@@ -197,12 +201,33 @@ void focusOnFileViewer(FileViewer fs){
 	}
 
 }
+void menuInputHandling(FileViewer fs){
+	int c;
+	while((c = getch()) != KEY_BACKSPACE){
+		switch(c){
+			case KEY_DOWN:
+				fs.nmenu->menu_down();
+				break;
+			case KEY_UP:
+				fs.nmenu->menu_up();
+				break;
+			case KEY_RIGHT:
+				fs.nmenu->menu_right();
+				break;
+			case KEY_LEFT:
+				fs.nmenu->menu_left();
+				break;
+		}
+	}
+}
 
 int main() {
 	// sets the locale so that terminals use UTF8 encoding
-	//std::setlocale(LC_ALL, "en_US.UTF-8");
+	// std::setlocale(LC_ALL, "en_US.UTF-8");
 	// initializes curses
 	initscr();
+	//starts color system
+	start_color();
 	// refreshes the screen
 	keypad(stdscr, TRUE);
 	refresh();
@@ -215,8 +240,13 @@ int main() {
 	//update the panel stacking
 	update_panels();
 	doupdate();
-
-	focusOnFileViewer(fs);
+	
+	fsys::path cwd = fsys::current_path();
+	fs.nmenu->setWindow(fs.getWindow());
+	fs.nmenu->setMenuItems(fs.nmenu->getDirFiles(cwd));
+	fs.nmenu->drawMenu();
+	menuInputHandling(fs);
+	//focusOnFileViewer(fs);
 
 	getch();
 	// close curses
