@@ -3,6 +3,8 @@
 #include <clocale>
 #include <string>
 
+#include <fstream> // temporary
+
 
 /* notes on using Cursors:
    line_num should refer to the current line, like normal
@@ -29,15 +31,15 @@ class Window {
     public:
         void resize(int, int);
         void onFocus();
-        void create_windows(int h, int w, int y0, int x0){
-            width = w;
-            height = h;
-            int lineNumLen = 4; //how much space we give the line numbers
-            win = newwin(h - 2, w - 2 - lineNumLen, y0 + 1, x0 + 1 + lineNumLen);
-            pan = new_panel(win);
-            border_win = newwin(h, w, y0, x0);
+        // this method should be called by subclass methods. 
+        void create_windows(int outer_h, int outer_w, int outer_y0, int outer_x0, int inner_h, int inner_w, int inner_y0, int inner_x0){
+            width = outer_w;
+            height = outer_h;
+            border_win = newwin(outer_h, outer_w, outer_y0, outer_x0);
             wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
             border_pan = new_panel(border_win);
+            win = newwin(inner_h, inner_w, inner_y0, inner_x0);
+            pan = new_panel(win);
             wrefresh(border_win);
             wrefresh(win);
         }
@@ -54,7 +56,7 @@ class Editor : protected Window{
         int strs_size;
 
         Editor(int h, int w, int y0, int x0){
-            Window::create_windows(h, w, y0, x0);
+            create_windows(h, w, y0, x0);
             cursor = Cursor();
             cursor.screen_x = 0;
             cursor.screen_y = 0;
@@ -62,6 +64,18 @@ class Editor : protected Window{
             *strs = new std::string*[1];
             strs_size = 1;
             *strs[0] = new std::string();
+        }
+
+        void create_windows(int h, int w, int y0, int x0){
+            int line_num_width = 0;
+            int num_rows = screen_rows;
+
+            while (num_rows){
+                num_rows /= 10;
+                line_num_width++;
+            }
+
+            Window::create_windows(h, w, y0, x0, h - 2, w - 2 - line_num_width, y0 + 1, x0 + 1 + line_num_width);
         }
 
         WINDOW* getEditorWindow(){
@@ -146,12 +160,20 @@ class Editor : protected Window{
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
+                    std::ofstream logfile;
+                    logfile.open("log.txt", std::ios_base::app);
+                    logfile << "string before: |" + (*(*strs)[cursor.line_num]) + "\n";
                     (*(*strs)[cursor.line_num]).insert(cursor.line_position, 1, (char) c);
                     const char* a = (*(*strs)[cursor.line_num]).data();
+                    logfile << "char : " + std::string(1, (char) c);
+                    logfile << "\n";
+                    logfile << "string after: |" + (*(*strs)[cursor.line_num]);
+                    logfile << "\n";
+                    logfile.close();
                     mvwaddnstr(Window::border_win, 3, 0, std::to_string(cursor.screen_y).data(), 1);
                     mvwaddnstr(Window::border_win, 4, 0, std::to_string(cursor.screen_x).data(), 1);
                     wrefresh(Window::border_win);
-                    mvwaddnstr(Window::win, cursor.screen_y+1, cursor.screen_x+1, (*(*strs)[cursor.line_num]).data(), 1);
+                    mvwaddch(Window::win, cursor.screen_y, cursor.screen_x+1, (char) c);
                     wrefresh(Window::win);
                     mvwaddch(Window::border_win, 0, 0, 'b');
                     wrefresh(Window::border_win);
@@ -184,10 +206,14 @@ class FileViewer : protected Window{
     protected:
     public:
         FileViewer(int h, int w, int y0, int x0){
-            Window::create_windows(h, w, y0, x0);
+            create_windows(h, w, y0, x0);
         }
         Cursor cursor;
         void resize(int, int);
+
+        void create_windows(int h, int w, int y0, int x0){
+            Window::create_windows(h, w, y0, x0, h - 2, w - 2, y0 + 1, x0 + 1);
+        }
 
         WINDOW* getWindow(){
             return Window::win;
@@ -216,7 +242,7 @@ class Dialog : protected Window{
             int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
             int start_y = (screen_rows + 1)/2 - (height + 1)/2;
             // offsets to account for the border
-            Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1);
+            Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
             waddstr(Window::win, str.data());
             wrefresh(Window::win);
         }
@@ -254,10 +280,11 @@ int main() {
     keypad(stdscr, true);
     getmaxyx(stdscr, screen_rows, screen_cols);
     // creates the editor screen
-    ed = new Editor(LINES-1, COLS-20, 0, 20);
-    fs = new FileViewer(LINES-1, 21, 0, 0);
+    ed = new Editor(screen_rows-1, screen_cols-20, 0, 20);
+    fs = new FileViewer(screen_rows-1, 21, 0, 0);
     //Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
     //update the panel stacking
+    //top_panel(ed->getEditorPanel());
     update_panels();
     doupdate();
     //focusOnFileViewer(fs);
