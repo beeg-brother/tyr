@@ -66,30 +66,34 @@ namespace filemenu{
 			}
 			// draws the menu onto the screen
 			void drawMenu(){
-				wrefresh(win);
+				werase(win);
 				num_files = menu_choices.size();
+				expansion_vector.resize(num_files);
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
+					scrollToFit();
 					curs_set(0);
 					for (int currenty = scroll_start; currenty < scroll_start + window_height; currenty++){
 						if (currenty < num_files){
 							if (currenty == current_index){
-								wattron(win,A_BOLD | A_UNDERLINE);
+								wattron(win,A_BOLD);
 								waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
-								wattroff(win,A_BOLD| A_UNDERLINE);
+								wattroff(win,A_BOLD);
 								waddstr(win, "\n");
 							}
 							
 							else{
 								if (fsys::is_directory(menu_choices[currenty])){
-									wattron(win,A_UNDERLINE);
+									wattron(win,A_UNDERLINE | A_DIM);
 									waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
-									wattroff(win, A_UNDERLINE);
+									wattroff(win, A_UNDERLINE | A_DIM);
 									waddstr(win, "\n");
 								}
 								else{
 									// items that aren't selected
+									wattron(win,A_DIM);
 									waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
+									wattroff(win, A_DIM);
 									waddstr(win, "\n");
 								}
 
@@ -105,7 +109,6 @@ namespace filemenu{
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
 					werase(win);
-					wrefresh(win);
 				}
 			}
 			// gets files from the given directory as a vector of strings
@@ -133,7 +136,14 @@ namespace filemenu{
 				num_files = path_vector.size();
 				expansion_vector.resize(num_files, false);
 			}
-
+			int getIndex(fsys::path item, std::vector<fsys::path> vector){
+				for (int i= 0; i< vector.size(); i++){
+					if (vector[i] == item){
+						return i;
+					}
+				}
+				return -1;
+			}
 			void collapseDirectory(int directoryIndex){
 				// if the directory has been expanded
 				if (expansion_vector[directoryIndex]){
@@ -143,12 +153,16 @@ namespace filemenu{
 						all_files.push_back(p.path());
 					}
 					// remove every occurrence of each subpath from the menu
-					for (int i =0; i< all_files.size(); i++){
+					for (int i = 0; i < all_files.size(); i++){
+						// remove it from the menu choices
 						menu_choices.erase(std::remove(menu_choices.begin(), menu_choices.end(), all_files[i]), menu_choices.end());
+						// remove the corresponding expansion vector entry
+						expansion_vector.erase(expansion_vector.begin() + getIndex(all_files[i], menu_choices) + 1);						
 					}
 					expansion_vector[directoryIndex] = false;
 				}
 				removeMenu();
+				wrefresh(win);
 				drawMenu(); 				
 			}
 
@@ -158,6 +172,7 @@ namespace filemenu{
 				std::vector<fsys::path> new_elements;
 				new_elements = getDirFiles(path_expanding);
 				removeMenu();
+				wrefresh(win);
 				updateMenu(new_elements, directoryIndex);
 				drawMenu();
 			}
@@ -191,8 +206,6 @@ namespace filemenu{
 					current_index += 1;
 				}
 				removeMenu();
-				
-				scrollToFit();
 				drawMenu();
 			}
 			void menu_up(){
@@ -203,8 +216,6 @@ namespace filemenu{
 					current_index -= 1;
 				}
 				removeMenu();
-				
-				scrollToFit();
 				drawMenu();
 			}
 			void menu_left(){
@@ -227,11 +238,13 @@ namespace filemenu{
 			void scrollToFit(){
 				// if the current index is outside of the range
 				// we need to scroll to fit the current selection onto the screen
-				while (current_index < scroll_start){
-					scroll_start -= 1;
+				if (current_index < scroll_start){
+					scroll_start -= scroll_start - current_index;
+					wrefresh(win);
 				}
-				while (current_index > scroll_start + window_height - 1){
-					scroll_start += 1;
+				if (current_index > scroll_start + window_height - 1){
+					scroll_start += current_index- (scroll_start + window_height - 1);
+					wrefresh(win);
 				}
 
 			}
