@@ -151,8 +151,11 @@ class Editor : protected Window{
                 case 10: // ENTER KEY
                     cursor.screen_y += 1;
                     cursor.screen_x = 0;
+                    cursor.line_num += 1;
+                    cursor.line_position = 0;
                     // TODO: add string array copying, inserting new line
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
+                    // TODO: having this here is hacky, change it
                     mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
                 case 127: // BACKSPACE KEY
@@ -161,23 +164,11 @@ class Editor : protected Window{
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
-                    std::ofstream logfile;
-                    logfile.open("log.txt", std::ios_base::app);
-                    logfile << "string before: |" + (*(*strs)[cursor.line_num]) + "\n";
                     (*(*strs)[cursor.line_num]).insert(cursor.line_position, 1, (char) c);
                     const char* a = (*(*strs)[cursor.line_num]).data();
-                    logfile << "char : " + std::string(1, (char) c);
-                    logfile << "\n";
-                    logfile << "string after: |" + (*(*strs)[cursor.line_num]);
-                    logfile << "\n";
-                    logfile.close();
-                    mvwaddnstr(Window::border_win, 3, 0, std::to_string(cursor.screen_y).data(), 1);
-                    mvwaddnstr(Window::border_win, 4, 0, std::to_string(cursor.screen_x).data(), 1);
-                    wrefresh(Window::border_win);
-                    mvwaddch(Window::win, cursor.screen_y, cursor.screen_x+1, (char) c);
+                    mvwaddnstr(Window::win, cursor.screen_y, 0, (*(*strs)[cursor.line_num]).data(), screen_cols);
+                    //mvwaddch(Window::win, cursor.screen_y, cursor.screen_x+1, (char) c);
                     wrefresh(Window::win);
-                    mvwaddch(Window::border_win, 0, 0, 'b');
-                    wrefresh(Window::border_win);
                     cursor.screen_x += 1;
                     cursor.line_position += 1;
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
