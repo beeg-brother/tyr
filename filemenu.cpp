@@ -28,6 +28,7 @@ namespace filemenu{
 			// drawing related things:
 			int window_width;
 			int window_height;
+			int scroll_start = 0;
 			//selected item color
 			
 			//init_pair(0, COLOR_GREEN,COLOR_BLACK);
@@ -64,29 +65,31 @@ namespace filemenu{
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
 					curs_set(0);
-					for (int currenty = 0; currenty < num_files; currenty++){
-						if (currenty == current_index){
-							wattron(win,A_BOLD | A_UNDERLINE);
-							waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
-							wattroff(win,A_BOLD| A_UNDERLINE);
-							waddstr(win, "\n");
-						}
-						
-						else{
-							if (fsys::is_directory(menu_choices[currenty])){
-								wattron(win,A_UNDERLINE);
+					for (int currenty = scroll_start; currenty < scroll_start + window_height; currenty++){
+						if (currenty < num_files){
+							if (currenty == current_index){
+								wattron(win,A_BOLD | A_UNDERLINE);
 								waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
-								wattroff(win, A_UNDERLINE);
+								wattroff(win,A_BOLD| A_UNDERLINE);
 								waddstr(win, "\n");
 							}
+							
 							else{
-								// items that aren't selected
-								waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
-								waddstr(win, "\n");
+								if (fsys::is_directory(menu_choices[currenty])){
+									wattron(win,A_UNDERLINE);
+									waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
+									wattroff(win, A_UNDERLINE);
+									waddstr(win, "\n");
+								}
+								else{
+									// items that aren't selected
+									waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
+									waddstr(win, "\n");
+								}
+
 							}
 
 						}
-
 					}
 				}
 				wrefresh(win);
@@ -164,6 +167,7 @@ namespace filemenu{
 					current_index += 1;
 				}
 				removeMenu();
+				scrollToFit();
 				drawMenu();
 			}
 			void menu_up(){
@@ -174,6 +178,7 @@ namespace filemenu{
 					current_index -= 1;
 				}
 				removeMenu();
+				scrollToFit();
 				drawMenu();
 			}
 			void menu_left(){
@@ -189,6 +194,21 @@ namespace filemenu{
 					expandDirectory(current_index);
 				}
 				wrefresh(win);
+			}
+			bool checkIfExpanded(int index){
+
+				return false;
+			}
+			void scrollToFit(){
+				// if the current index is outside of the range
+				// we need to scroll to fit the current selection onto the screen
+				while (current_index < scroll_start){
+					scroll_start -= 1;
+				}
+				while (current_index > scroll_start + window_height - 1){
+					scroll_start += 1;
+				}
+
 			}
 	};
 }
