@@ -3,7 +3,6 @@
 #include <clocale>
 #include <string>
 
-#include <fstream> // temporary
 
 /* notes on using Cursors:
    line_num should refer to the current line, like normal
@@ -30,7 +29,7 @@ class Window {
     public:
         void resize(int, int);
         void onFocus();
-        // this method should be called by subclass methods. 
+        // this method should be called by subclass methods, not called directly
         void create_windows(int outer_h, int outer_w, int outer_y0, int outer_x0, int inner_h, int inner_w, int inner_y0, int inner_x0){
             width = outer_w;
             height = outer_h;
@@ -65,10 +64,11 @@ class Editor : protected Window{
             *strs[0] = new std::string();
         }
 
+        // create editor windows, leaving room for line numbering.
         void create_windows(int h, int w, int y0, int x0){
             int line_num_width = 0;
             int num_rows = screen_rows;
-
+            // calculate the number of digits in the maximum line number
             while (num_rows){
                 num_rows /= 10;
                 line_num_width++;
@@ -77,26 +77,30 @@ class Editor : protected Window{
             Window::create_windows(h, w, y0, x0, h - 2, w - 2 - line_num_width, y0 + 1, x0 + 1 + line_num_width);
         }
 
+        // returns the WINDOW object that the editing happens in
         WINDOW* getEditorWindow(){
             return Window::win;
         }
 
+        // returns the PANEL object that the editing window is in
         PANEL* getEditorPanel(){
             return Window::pan;
         }
 
         Cursor cursor;
+
         void resize(int, int);
 
         void onFocus();
 
+        // deals with the input of characters to the editor.
+        // typing, arrow keys, etc.
         void handleInput(int c){
             switch (c){
                 case KEY_RIGHT:
                     if((*(*strs)[cursor.line_num]).size() > cursor.screen_x){ // check if its valid to move over a character
                         cursor.screen_x += 1;
                         cursor.line_position += 1;
-                        wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     } else {
                         // TODO proper restriction here: case of being at the bottom of the screen with more below, offscreen
                         cursor.screen_x = 0;
@@ -108,43 +112,51 @@ class Editor : protected Window{
                         // TODO: try to shift the line over to continue the view.
                     break;
                 case KEY_LEFT:
+                    // TODO: edge cases of line scrolling
                     if(cursor.line_position == 0){
+                        // if at the start of a line, but not line 1, its ok to move to the end of the last line.
                         if(cursor.line_num != 0){
                             cursor.line_position = (*(*strs)[cursor.line_num]).size() - 1;
                             cursor.line_num -= 1;
                             cursor.screen_x = std::min(screen_cols, cursor.line_position);
                         }
+                        // if at (0, 0), do nothing
                     } else {
+                        // if we're not at the start of the line, just move left one
                         cursor.line_position -= 1;
                         cursor.screen_x -= 1;
                     }
-                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case KEY_UP:
+                    // TODO: deal with scrolling
                     if(cursor.line_num != 0){
+                        // if at any normal position, just move up a line
                         cursor.line_num -= 1;
+                        // set cursor x to be either the end of the line or the current x, whichever is smaller to prevent out of bounds B)
                         cursor.line_position = std::min((int)(*(*strs)[cursor.line_num]).size() - 1, cursor.line_position);
                         cursor.screen_y -= 1;
                         cursor.screen_x = std::min(screen_cols, cursor.line_position);
                     } else if (cursor.line_position != 0){
+                        // if at the top line, just move to (0, 0)
                         cursor.line_position = 0;
                         cursor.screen_x = 0;
                     }
-                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case KEY_DOWN:
-                    if(cursor.line_num == strs_size - 1){ // on last line
+                    if(cursor.line_num == strs_size - 1){
+                        // if on last line, go to the end
                         if(cursor.line_position != (*(*strs)[cursor.line_num]).size() - 1){
                             cursor.line_position = (*(*strs)[cursor.line_num]).size() - 1;
                             cursor.screen_x = std::min((int) (*(*strs)[cursor.line_num]).size() - 1, screen_cols);
                         }
                     } else {
+                        // otherwise, just move down a row
                         cursor.line_num += 1;
                         cursor.screen_y = std::min(cursor.line_num, screen_rows);
+                        // again, this line places the cursor at either the current x or the end of the line to avoid out of bounds
                         cursor.line_position = std::min(cursor.line_position, (int) (*(*strs)[cursor.line_num]).size() - 1);
                         cursor.screen_x = std::min(cursor.line_position, screen_cols);
                     }
-                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 case 10: // ENTER KEY
                     cursor.screen_y += 1;
@@ -152,7 +164,6 @@ class Editor : protected Window{
                     cursor.line_num += 1;
                     cursor.line_position = 0;
                     // TODO: add string array copying, inserting new line
-                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     // TODO: having this here is hacky, change it
                     mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
@@ -165,16 +176,15 @@ class Editor : protected Window{
                     (*(*strs)[cursor.line_num]).insert(cursor.line_position, 1, (char) c);
                     const char* a = (*(*strs)[cursor.line_num]).data();
                     mvwaddnstr(Window::win, cursor.screen_y, 0, (*(*strs)[cursor.line_num]).data(), screen_cols);
-                    //mvwaddch(Window::win, cursor.screen_y, cursor.screen_x+1, (char) c);
                     wrefresh(Window::win);
                     cursor.screen_x += 1;
                     cursor.line_position += 1;
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
             }
-            
             //mvwaddstr(Window::win, cursor.screen_y, cursor.screen_x, (*(*strs)[cursor.line_num]).data());
-            //wmove(Window::win, cursor.screen_y, cursor.screen_x);
+            // update cursor position
+            wmove(Window::win, cursor.screen_y, cursor.screen_x);
             wrefresh(Window::border_win);
             wrefresh(Window::win);
         }
