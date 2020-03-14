@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include <assert.h>
+#include <algorithm>
 #include <fstream>
 
 namespace fsys = std::filesystem;
@@ -65,6 +66,7 @@ namespace filemenu{
 			}
 			// draws the menu onto the screen
 			void drawMenu(){
+				wrefresh(win);
 				num_files = menu_choices.size();
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
@@ -103,6 +105,7 @@ namespace filemenu{
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
 					werase(win);
+					wrefresh(win);
 				}
 			}
 			// gets files from the given directory as a vector of strings
@@ -130,18 +133,31 @@ namespace filemenu{
 				num_files = path_vector.size();
 				expansion_vector.resize(num_files, false);
 			}
+
 			void collapseDirectory(int directoryIndex){
-				// figure out how many items are in the directory
-				// take out that many items from right after directoryIndex
-				// make the directory expandable again
+				// if the directory has been expanded
+				if (expansion_vector[directoryIndex]){
+					// get every single file in the directory
+					std::vector<fsys::path> all_files;
+					for(auto& p: fsys::recursive_directory_iterator(menu_choices[directoryIndex])){
+						all_files.push_back(p.path());
+					}
+					// remove every occurrence of each subpath from the menu
+					for (int i =0; i< all_files.size(); i++){
+						menu_choices.erase(std::remove(menu_choices.begin(), menu_choices.end(), all_files[i]), menu_choices.end());
+					}
+					expansion_vector[directoryIndex] = false;
+				}
+				removeMenu();
+				drawMenu(); 				
 			}
+
 
 			void expandDirectory(int directoryIndex){
 				fsys::path path_expanding = menu_choices[directoryIndex];
 				std::vector<fsys::path> new_elements;
 				new_elements = getDirFiles(path_expanding);
 				removeMenu();
-				wrefresh(win);
 				updateMenu(new_elements, directoryIndex);
 				drawMenu();
 			}
@@ -175,6 +191,7 @@ namespace filemenu{
 					current_index += 1;
 				}
 				removeMenu();
+				
 				scrollToFit();
 				drawMenu();
 			}
@@ -186,6 +203,7 @@ namespace filemenu{
 					current_index -= 1;
 				}
 				removeMenu();
+				
 				scrollToFit();
 				drawMenu();
 			}
