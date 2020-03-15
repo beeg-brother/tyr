@@ -79,7 +79,7 @@ namespace filemenu{
 								fsys::path temp = menu_choices[currenty];
 								while(temp.parent_path() != cwd){
 									temp = temp.parent_path();
-									mvwaddch(win, currenty, prepends, ACS_VLINE);
+									mvwaddch(win, currenty - scroll_start, prepends, ACS_VLINE);
 									prepends++;
 								}
 							}
