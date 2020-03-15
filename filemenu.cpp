@@ -18,8 +18,6 @@ namespace filemenu{
 		public:
 			// the list of choices that will show up in the menu
 			std::vector<fsys::path> menu_choices;
-			// determines whether or not an item in the menu is expanded or not
-			std::vector<bool> expansion_vector;
 			// the number of files in the menu choices
 			int num_files;
 			// the root path, where tyr is opened from
@@ -49,13 +47,11 @@ namespace filemenu{
 			Menu(std::vector<fsys::path> choices){
 				menu_choices = choices;
 				num_files = menu_choices.size();
-				expansion_vector.resize(num_files,false);
 			}
 			Menu(std::vector<fsys::path> choices, WINDOW* window){
 				win = window;
 				menu_choices = choices;
 				num_files = menu_choices.size();
-				expansion_vector.resize(num_files,false);
 			}
 
 
@@ -68,7 +64,6 @@ namespace filemenu{
 			void drawMenu(){
 				werase(win);
 				num_files = menu_choices.size();
-				expansion_vector.resize(num_files);
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
 					scrollToFit();
@@ -156,13 +151,10 @@ namespace filemenu{
 				// insert the elements into the menu_choices in the correct index
 				menu_choices.insert(menu_choices.begin() + index + 1,new_elements.begin(), new_elements.end());
 				num_files = menu_choices.size();
-				expansion_vector.resize(num_files, false);
-				expansion_vector[index] = true;
 			}
 			void setMenuItems(std::vector<fsys::path> path_vector){
 				menu_choices = path_vector;
 				num_files = path_vector.size();
-				expansion_vector.resize(num_files, false);
 			}
 			int getIndex(fsys::path item, std::vector<fsys::path> vector){
 				for (int i= 0; i< vector.size(); i++){
@@ -173,8 +165,20 @@ namespace filemenu{
 				return -1;
 			}
 			void collapseDirectory(int directoryIndex){
+				bool collapseNecessary = false;
+
+				if(directoryIndex == menu_choices.size() - 1){
+					// if this is the last item in the list, don't bother collapsing
+					collapseNecessary = false;
+				} else {
+					if(menu_choices[directoryIndex + 1].parent_path() == menu_choices[directoryIndex]){
+						// if the next item is a subfile, collapse is necessary
+						collapseNecessary = true;
+					}
+				}
 				// if the directory has been expanded
-				if (expansion_vector[directoryIndex]){
+				
+				if (collapseNecessary){
 					// get every single file in the directory
 					std::vector<fsys::path> all_files;
 					for(auto& p: fsys::recursive_directory_iterator(menu_choices[directoryIndex])){
@@ -184,10 +188,7 @@ namespace filemenu{
 					for (int i = 0; i < all_files.size(); i++){
 						// remove it from the menu choices
 						menu_choices.erase(std::remove(menu_choices.begin(), menu_choices.end(), all_files[i]), menu_choices.end());
-						// remove the corresponding expansion vector entry
-						expansion_vector.erase(expansion_vector.begin() + getIndex(all_files[i], menu_choices) + 1);						
 					}
-					expansion_vector[directoryIndex] = false;
 				}
 				removeMenu();
 				wrefresh(win);
@@ -196,13 +197,30 @@ namespace filemenu{
 
 
 			void expandDirectory(int directoryIndex){
-				fsys::path path_expanding = menu_choices[directoryIndex];
-				std::vector<fsys::path> new_elements;
-				new_elements = getDirFiles(path_expanding);
-				removeMenu();
-				wrefresh(win);
-				updateMenu(new_elements, directoryIndex);
-				drawMenu();
+
+				bool expansionNecessary = false;
+
+				if(directoryIndex == menu_choices.size() - 1){
+					// if this is the last element in the list, expand (this is done to avoid out of bounds with the next test)
+					expansionNecessary = true;
+				} else {
+					if(menu_choices[directoryIndex + 1].parent_path() == menu_choices[directoryIndex]){
+						// if the next element is a subfile, don't expand again
+						expansionNecessary = false;
+					} else {
+						// if the next element is not a subfile, expand
+						expansionNecessary = true;
+					}
+				}
+				if(expansionNecessary){
+					fsys::path path_expanding = menu_choices[directoryIndex];
+					std::vector<fsys::path> new_elements;
+					new_elements = getDirFiles(path_expanding);
+					removeMenu();
+					wrefresh(win);
+					updateMenu(new_elements, directoryIndex);
+					drawMenu();
+				}
 			}
 
 			void checkForFileUpdates(fsys::path path){
@@ -256,9 +274,8 @@ namespace filemenu{
 			void menu_right(){
 				// if its a directory expand it
 				if (fsys::is_directory(menu_choices[current_index])){
-					if (expansion_vector[current_index] == false){
-						expandDirectory(current_index);
-					}
+					expandDirectory(current_index);
+					
 				}
 				wrefresh(win);
 			}
