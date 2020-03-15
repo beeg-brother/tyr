@@ -223,7 +223,7 @@ void menuInputHandling(FileViewer fs){
 
 int main() {
 	// sets the locale so that terminals use UTF8 encoding
-	// std::setlocale(LC_ALL, "en_US.UTF-8");
+	//std::setlocale(LC_ALL, "en_US.UTF-8");
 	// initializes curses
 	initscr();
 	//starts color system

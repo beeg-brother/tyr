@@ -88,35 +88,35 @@ namespace filemenu{
 								// this first test makes sure not to do index out of bounds later
 								// basically if this is the last item in the list there's no need to have a T
 								if(prepends == menu_choices.size() - 1){
-									mvwaddch(win, currenty, prepends - 1, ACS_LLCORNER);
+									mvwaddch(win, currenty-scroll_start, prepends - 1, ACS_LLCORNER);
 								} else {
 									// if the next element is a subfile or is in the same folder as the current element, put a T
 									// otherwise, put a corner
 									if (menu_choices[currenty + 1].parent_path() == menu_choices[currenty].parent_path() |
 								           menu_choices[currenty + 1].parent_path() == menu_choices[currenty]){
-										mvwaddch(win, currenty, prepends - 1, ACS_LTEE);
+										mvwaddch(win, currenty - scroll_start, prepends - 1, ACS_LTEE);
 									} else {
-										mvwaddch(win, currenty, prepends - 1, ACS_LLCORNER);
+										mvwaddch(win, currenty - scroll_start, prepends - 1, ACS_LLCORNER);
 									}
 								}
 							}
 
 							if (currenty == current_index){
 								wattron(win,A_BOLD);
-								mvwaddnstr(win, currenty, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+								mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 								wattroff(win,A_BOLD);
 							}
 							
 							else{
 								if (fsys::is_directory(menu_choices[currenty])){
 									wattron(win,A_UNDERLINE | A_DIM);
-									mvwaddnstr(win, currenty, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+									mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 									wattroff(win, A_UNDERLINE | A_DIM);
 								}
 								else{
 									// items that aren't selected
 									wattron(win,A_DIM);
-									mvwaddnstr(win, currenty, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+									mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 									wattroff(win, A_DIM);
 								}
 
@@ -156,14 +156,7 @@ namespace filemenu{
 				menu_choices = path_vector;
 				num_files = path_vector.size();
 			}
-			int getIndex(fsys::path item, std::vector<fsys::path> vector){
-				for (int i= 0; i< vector.size(); i++){
-					if (vector[i] == item){
-						return i;
-					}
-				}
-				return -1;
-			}
+
 			void collapseDirectory(int directoryIndex){
 				bool collapseNecessary = false;
 
@@ -288,7 +281,7 @@ namespace filemenu{
 					wrefresh(win);
 				}
 				if (current_index > scroll_start + window_height - 1){
-					scroll_start += current_index- (scroll_start + window_height - 1);
+					scroll_start += current_index - (scroll_start + window_height - 1);
 					wrefresh(win);
 				}
 
