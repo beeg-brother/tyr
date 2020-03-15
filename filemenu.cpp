@@ -75,26 +75,54 @@ namespace filemenu{
 					curs_set(0);
 					for (int currenty = scroll_start; currenty < scroll_start + window_height; currenty++){
 						if (currenty < num_files){
+
+							// count how "deep" of a file it is - how many parent folders are there
+							// for each one, write a line in front of the file name
+							// this does overcount by one, but it will be overwritten later so no worries
+							int prepends = 0;
+							if (menu_choices[currenty].parent_path() != cwd){
+								fsys::path temp = menu_choices[currenty];
+								while(temp.parent_path() != cwd){
+									temp = temp.parent_path();
+									mvwaddch(win, currenty, prepends, ACS_VLINE);
+									prepends++;
+								}
+							}
+
+							if(prepends != 0){
+								// this first test makes sure not to do index out of bounds later
+								// basically if this is the last item in the list there's no need to have a T
+								if(prepends == menu_choices.size() - 1){
+									mvwaddch(win, currenty, prepends - 1, ACS_LLCORNER);
+								} else {
+									// if the next element is a subfile or is in the same folder as the current element, put a T
+									// otherwise, put a corner
+									if (menu_choices[currenty + 1].parent_path() == menu_choices[currenty].parent_path() |
+								           menu_choices[currenty + 1].parent_path() == menu_choices[currenty]){
+										mvwaddch(win, currenty, prepends - 1, ACS_LTEE);
+									} else {
+										mvwaddch(win, currenty, prepends - 1, ACS_LLCORNER);
+									}
+								}
+							}
+
 							if (currenty == current_index){
 								wattron(win,A_BOLD);
-								waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
+								mvwaddnstr(win, currenty, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 								wattroff(win,A_BOLD);
-								waddstr(win, "\n");
 							}
 							
 							else{
 								if (fsys::is_directory(menu_choices[currenty])){
 									wattron(win,A_UNDERLINE | A_DIM);
-									waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
+									mvwaddnstr(win, currenty, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 									wattroff(win, A_UNDERLINE | A_DIM);
-									waddstr(win, "\n");
 								}
 								else{
 									// items that aren't selected
 									wattron(win,A_DIM);
-									waddnstr(win, menu_choices[currenty].filename().u8string().c_str(),window_width - 1);
+									mvwaddnstr(win, currenty, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 									wattroff(win, A_DIM);
-									waddstr(win, "\n");
 								}
 
 							}
