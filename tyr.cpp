@@ -159,17 +159,37 @@ class Editor : protected Window{
                     }
                     break;
                 case 10: // ENTER KEY
+					// TODO: deal with case of pressing enter in the middle of a line
+                    // TODO: add string array copying, inserting new line
+					// TODO: possibly refactor to vectors https://stackoverflow.com/questions/12443737/copy-elements-of-an-old-array-of-pointers-into-new-array-of-pointers
+					// this whole section is terrible and illegible
+					// it copies the pointers from strs to temp_strs until a new string is needed
+					// it then inserts the new string and continues copying the pointers
+					{
+						std::string* *temp_strs[strs_size + 1];
+						for(int i = 0; i <= cursor.line_num; i++){
+							(*temp_strs)[i] = (*strs)[i];
+						}
+						*temp_strs[cursor.line_num + 1] = new std::string();
+						for(int i = cursor.line_num + 1; i < strs_size; i++){
+							*temp_strs[i + 1] = (*strs)[i];
+						}
+						strs_size += 1;
+						*strs = *temp_strs;
+					}
                     cursor.screen_y += 1;
                     cursor.screen_x = 0;
                     cursor.line_num += 1;
                     cursor.line_position = 0;
-                    // TODO: add string array copying, inserting new line
+					// TODO: refresh entire screen
                     // TODO: having this here is hacky, change it
                     mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
                 case 127: // BACKSPACE KEY
                     cursor.screen_x -=1;
-                    // TODO: remove previous letter in the active string
+					cursor.line_position -= 1;
+                    // TODO: make the backspace remove chars from the display that aren't being overwritten
+					(*(*strs)[cursor.line_num]).erase(cursor.line_position, 1);
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
