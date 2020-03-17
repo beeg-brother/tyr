@@ -167,22 +167,15 @@ class Editor : protected Window{
                     }
                     break;
                 case 10: // ENTER KEY
-					// TODO: something funky happening that duplicates and deletes lines...
                     if(cursor.line_num == strs.size() - 1){
-                        if(cursor.line_position == strs[cursor.line_num].size()){
-                            strs.push_back("");
-                        } else {
-                            strs.push_back(strs[cursor.line_num].substr(cursor.line_position));
-                            strs[cursor.line_num] = strs[cursor.line_num].substr(0, cursor.line_position);
-                        }
+                        // if on last line, we have to use push_back b/c insert doesn't append
+                        strs.push_back(strs[cursor.line_num].substr(cursor.line_position));
+                        strs[cursor.line_num] = strs[cursor.line_num].substr(0, cursor.line_position);
                     } else {
-                        strs.insert(strs.begin() + cursor.line_num + 1, strs[cursor.line_num].substr(cursor.line_position));
-                        strs[cursor.line_num - 1] = strs[cursor.line_num - 1].substr(0, cursor.line_position);
-                        /*if(cursor.line_position == strs[cursor.line_num].size()){
-                            strs.insert(strs.begin() + cursor.line_num - 1, std::string());
-                        } else {
-                            strs.insert(strs)
-                        }*/
+                        // this uses the iterator returned by insert to access the right position
+                        std::vector<std::string>::iterator temp_it = strs.insert(strs.begin() + cursor.line_num, strs[cursor.line_num].substr(0, cursor.line_position));
+                        temp_it += 1;
+                        (*temp_it) = (*temp_it).substr(cursor.line_position);
                     }
                     // TODO: scrolling
                     cursor.screen_y += 1;
