@@ -58,7 +58,7 @@ class Editor : protected Window{
             cursor.screen_x = 0;
             cursor.screen_y = 0;
             mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(1).c_str());
-            strs.push_back("");
+            strs.push_back(std::string());
             scroll_offset = 0;
         }
 
@@ -105,9 +105,16 @@ class Editor : protected Window{
         void handleInput(int c){
             switch (c){
                 case KEY_RIGHT:
-                    if(strs[cursor.line_num].size() > cursor.screen_x){ // check if its valid to move over a character
+                    if(strs[cursor.line_num].size() > cursor.line_position){ // check if its valid to move over a character
                         cursor.screen_x += 1;
                         cursor.line_position += 1;
+                    } else if(cursor.line_position == strs[cursor.line_num].size()) {
+                        if(cursor.line_num < strs.size() - 1){
+                            cursor.line_num += 1;
+                            cursor.screen_y += 1;
+                            cursor.line_position = 0;
+                            cursor.screen_x = 0;
+                        }
                     } else {
                         // TODO proper restriction here: case of being at the bottom of the screen with more below, offscreen
                         cursor.screen_x = 0;
