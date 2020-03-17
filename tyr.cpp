@@ -199,11 +199,21 @@ class Editor : protected Window{
                     mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
                 case 127: // BACKSPACE KEY
-                    cursor.screen_x -=1;
-					cursor.line_position -= 1;
-                    // TODO: make the backspace remove chars from the display that aren't being overwritten
-                    // don't use rewrite(), computationally expensive tbh
-					strs[cursor.line_num].erase(cursor.line_position, 1);
+                    if(cursor.line_position == 0){
+                        cursor.line_position = strs[cursor.line_num - 1].size();
+                        cursor.screen_x = std::min(cursor.line_position, window_width);
+                        strs[cursor.line_num - 1] += strs[cursor.line_num];
+                        strs.erase(strs.begin() + cursor.line_num);
+                        cursor.line_num -= 1;
+                        cursor.screen_y -= 1;
+                        rewrite();
+                    } else {
+				    	strs[cursor.line_num].erase(cursor.line_position - 1, 1);
+                        cursor.screen_x -=1;
+					    cursor.line_position -= 1;
+                    }
+                    mvwaddstr(win, cursor.screen_y, 0, std::string(window_width, ' ').data());
+                    mvwaddnstr(win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
