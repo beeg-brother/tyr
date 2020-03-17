@@ -51,6 +51,8 @@ class Editor : protected Window{
         std::vector<std::string> strs;
         // TODO: implement scrolling
         int scroll_offset;
+        int window_width;
+        int window_height;
 
         Editor(int h, int w, int y0, int x0){
             create_windows(h, w, y0, x0);
@@ -60,6 +62,7 @@ class Editor : protected Window{
             mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(1).c_str());
             strs.push_back(std::string());
             scroll_offset = 0;
+            getmaxyx(win, window_height, window_width);
         }
 
         // create editor windows, leaving room for line numbering.
@@ -95,7 +98,7 @@ class Editor : protected Window{
             // TODO: rewrite the line numbers
             wclear(win);
             for(int i = 0; i < std::min(screen_rows, (int) strs.size()); i++){
-                mvwaddnstr(win, i, 0, strs[i].data(), screen_cols);
+                mvwaddnstr(win, i, 0, strs[i].data(), window_width);
             }
             wrefresh(win);
         }
@@ -133,7 +136,7 @@ class Editor : protected Window{
                             cursor.line_num -= 1;
                             cursor.screen_y -= 1;
                             cursor.line_position = strs[cursor.line_num].size();
-                            cursor.screen_x = std::min(screen_cols, cursor.line_position);
+                            cursor.screen_x = std::min(window_height, cursor.line_position);
                         }
                         // if at (0, 0), do nothing
                     } else {
@@ -150,7 +153,7 @@ class Editor : protected Window{
                         // set cursor x to be either the end of the line or the current x, whichever is smaller to prevent out of bounds B)
                         cursor.line_position = std::min((int) strs[cursor.line_num].size(), cursor.line_position);
                         cursor.screen_y -= 1;
-                        cursor.screen_x = std::min(screen_cols, cursor.line_position);
+                        cursor.screen_x = std::min(window_height, cursor.line_position);
                     } else {
                         // if at the top line, just move to (0, 0)
                         cursor.line_position = 0;
@@ -162,7 +165,7 @@ class Editor : protected Window{
                         // if on last line, go to the end
                         if(cursor.line_position != strs[cursor.line_num].size()){
                             cursor.line_position = strs[cursor.line_num].size();
-                            cursor.screen_x = std::min((int) strs[cursor.line_num].size(), screen_cols);
+                            cursor.screen_x = std::min((int) strs[cursor.line_num].size(), window_height);
                         }
                     } else {
                         // otherwise, just move down a row
@@ -170,7 +173,7 @@ class Editor : protected Window{
                         cursor.screen_y = std::min(cursor.line_num, screen_rows);
                         // again, this line places the cursor at either the current x or the end of the line to avoid out of bounds
                         cursor.line_position = std::min(cursor.line_position, (int) strs[cursor.line_num].size());
-                        cursor.screen_x = std::min(cursor.line_position, screen_cols);
+                        cursor.screen_x = std::min(cursor.line_position, window_height);
                     }
                     break;
                 case 10: // ENTER KEY
@@ -206,7 +209,7 @@ class Editor : protected Window{
                 default:
                     strs[cursor.line_num].insert(cursor.line_position, 1, (char) c);
                     const char* a = strs[cursor.line_num].data();
-                    mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), screen_cols);
+                    mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
                     wrefresh(Window::win);
                     cursor.screen_x += 1;
                     cursor.line_position += 1;
