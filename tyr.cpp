@@ -2,7 +2,7 @@
 #include <panel.h>
 #include <clocale>
 #include <string>
-
+#include <vector>
 
 /* notes on using Cursors:
    line_num should refer to the current line, like normal
@@ -47,11 +47,10 @@ class Window {
 class Editor : protected Window{
     protected:
     public:
-        // number of elements in strs
-        // if this is 0, strs is empty
-        // this means that strs[strs_size] is out of bounds
-        // strs[strs_size - 1] is the last element
-        int strs_size;
+
+        std::vector<std::string> strs;
+        // TODO: implement scrolling
+        int scroll_offset;
 
         Editor(int h, int w, int y0, int x0){
             create_windows(h, w, y0, x0);
@@ -59,9 +58,8 @@ class Editor : protected Window{
             cursor.screen_x = 0;
             cursor.screen_y = 0;
             mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(1).c_str());
-            *strs = new std::string*[1];
-            strs_size = 1;
-            *strs[0] = new std::string();
+            strs.push_back("");
+            scroll_offset = 0;
         }
 
         // create editor windows, leaving room for line numbering.
@@ -93,12 +91,21 @@ class Editor : protected Window{
 
         void onFocus();
 
+        void rewrite(){
+            // TODO: rewrite the line numbers
+            wclear(win);
+            for(int i = 0; i < std::min(screen_rows, (int) strs.size()); i++){
+                mvwaddnstr(win, i, 0, strs[i].data(), screen_cols);
+            }
+            wrefresh(win);
+        }
+
         // deals with the input of characters to the editor.
         // typing, arrow keys, etc.
         void handleInput(int c){
             switch (c){
                 case KEY_RIGHT:
-                    if((*(*strs)[cursor.line_num]).size() > cursor.screen_x){ // check if its valid to move over a character
+                    if(strs[cursor.line_num].size() > cursor.screen_x){ // check if its valid to move over a character
                         cursor.screen_x += 1;
                         cursor.line_position += 1;
                     } else {
@@ -116,8 +123,9 @@ class Editor : protected Window{
                     if(cursor.line_position == 0){
                         // if at the start of a line, but not line 1, its ok to move to the end of the last line.
                         if(cursor.line_num != 0){
-                            cursor.line_position = (*(*strs)[cursor.line_num]).size() - 1;
                             cursor.line_num -= 1;
+                            cursor.screen_y -= 1;
+                            cursor.line_position = strs[cursor.line_num].size();
                             cursor.screen_x = std::min(screen_cols, cursor.line_position);
                         }
                         // if at (0, 0), do nothing
@@ -133,55 +141,57 @@ class Editor : protected Window{
                         // if at any normal position, just move up a line
                         cursor.line_num -= 1;
                         // set cursor x to be either the end of the line or the current x, whichever is smaller to prevent out of bounds B)
-                        cursor.line_position = std::min((int)(*(*strs)[cursor.line_num]).size() - 1, cursor.line_position);
+                        cursor.line_position = std::min((int) strs[cursor.line_num].size(), cursor.line_position);
                         cursor.screen_y -= 1;
                         cursor.screen_x = std::min(screen_cols, cursor.line_position);
-                    } else if (cursor.line_position != 0){
+                    } else {
                         // if at the top line, just move to (0, 0)
                         cursor.line_position = 0;
                         cursor.screen_x = 0;
                     }
                     break;
                 case KEY_DOWN:
-                    if(cursor.line_num == strs_size - 1){
+                    if(cursor.line_num == strs.size() - 1){
                         // if on last line, go to the end
-                        if(cursor.line_position != (*(*strs)[cursor.line_num]).size() - 1){
-                            cursor.line_position = (*(*strs)[cursor.line_num]).size() - 1;
-                            cursor.screen_x = std::min((int) (*(*strs)[cursor.line_num]).size() - 1, screen_cols);
+                        if(cursor.line_position != strs[cursor.line_num].size()){
+                            cursor.line_position = strs[cursor.line_num].size();
+                            cursor.screen_x = std::min((int) strs[cursor.line_num].size(), screen_cols);
                         }
                     } else {
                         // otherwise, just move down a row
                         cursor.line_num += 1;
                         cursor.screen_y = std::min(cursor.line_num, screen_rows);
                         // again, this line places the cursor at either the current x or the end of the line to avoid out of bounds
-                        cursor.line_position = std::min(cursor.line_position, (int) (*(*strs)[cursor.line_num]).size() - 1);
+                        cursor.line_position = std::min(cursor.line_position, (int) strs[cursor.line_num].size());
                         cursor.screen_x = std::min(cursor.line_position, screen_cols);
                     }
                     break;
                 case 10: // ENTER KEY
-					// TODO: deal with case of pressing enter in the middle of a line
-                    // TODO: add string array copying, inserting new line
-					// TODO: possibly refactor to vectors https://stackoverflow.com/questions/12443737/copy-elements-of-an-old-array-of-pointers-into-new-array-of-pointers
-					// this whole section is terrible and illegible
-					// it copies the pointers from strs to temp_strs until a new string is needed
-					// it then inserts the new string and continues copying the pointers
-					{
-						std::string* *temp_strs[strs_size + 1];
-						for(int i = 0; i <= cursor.line_num; i++){
-							(*temp_strs)[i] = (*strs)[i];
-						}
-						*temp_strs[cursor.line_num + 1] = new std::string();
-						for(int i = cursor.line_num + 1; i < strs_size; i++){
-							*temp_strs[i + 1] = (*strs)[i];
-						}
-						strs_size += 1;
-						*strs = *temp_strs;
-					}
+					// TODO: something funky happening that duplicates and deletes lines...
+                    if(cursor.line_num == strs.size() - 1){
+                        if(cursor.line_position == strs[cursor.line_num].size()){
+                            strs.push_back("");
+                        } else {
+                            strs.push_back(strs[cursor.line_num].substr(cursor.line_position));
+                            strs[cursor.line_num] = strs[cursor.line_num].substr(0, cursor.line_position);
+                        }
+                    } else {
+                        strs.insert(strs.begin() + cursor.line_num + 1, strs[cursor.line_num].substr(cursor.line_position));
+                        strs[cursor.line_num - 1] = strs[cursor.line_num - 1].substr(0, cursor.line_position);
+                        /*if(cursor.line_position == strs[cursor.line_num].size()){
+                            strs.insert(strs.begin() + cursor.line_num - 1, std::string());
+                        } else {
+                            strs.insert(strs)
+                        }*/
+                    }
+                    // TODO: scrolling
                     cursor.screen_y += 1;
                     cursor.screen_x = 0;
                     cursor.line_num += 1;
                     cursor.line_position = 0;
-					// TODO: refresh entire screen
+
+                    rewrite();
+
                     // TODO: having this here is hacky, change it
                     mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
@@ -189,37 +199,26 @@ class Editor : protected Window{
                     cursor.screen_x -=1;
 					cursor.line_position -= 1;
                     // TODO: make the backspace remove chars from the display that aren't being overwritten
-					(*(*strs)[cursor.line_num]).erase(cursor.line_position, 1);
+                    // don't use rewrite(), computationally expensive tbh
+					strs[cursor.line_num].erase(cursor.line_position, 1);
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
-                    (*(*strs)[cursor.line_num]).insert(cursor.line_position, 1, (char) c);
-                    const char* a = (*(*strs)[cursor.line_num]).data();
-                    mvwaddnstr(Window::win, cursor.screen_y, 0, (*(*strs)[cursor.line_num]).data(), screen_cols);
+                    strs[cursor.line_num].insert(cursor.line_position, 1, (char) c);
+                    const char* a = strs[cursor.line_num].data();
+                    mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), screen_cols);
                     wrefresh(Window::win);
                     cursor.screen_x += 1;
                     cursor.line_position += 1;
                     wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
             }
-            //mvwaddstr(Window::win, cursor.screen_y, cursor.screen_x, (*(*strs)[cursor.line_num]).data());
+            //mvwaddstr(Window::win, cursor.screen_y, cursor.screen_x, strs[cursor.line_num].data());
             // update cursor position
             wmove(Window::win, cursor.screen_y, cursor.screen_x);
             wrefresh(Window::border_win);
             wrefresh(Window::win);
         }
-
-        // this is a pointer to an array of pointers. yes its terrible.
-        // see: https://www.geeksforgeeks.org/difference-between-pointer-to-an-array-and-array-of-pointers/
-        // and: http://www.fredosaurus.com/notes-cpp/newdelete/50dynamalloc.html
-        // i'm using a pointer to an array because it allows for dynamic length of the array
-        // i'm using an array of pointers because copying pointers from one array to another should be 100x
-        // more efficient than copying full strings
-        // to access an element of this shit, use (*(*strs)[n]). im sorry.
-        // i can resize strings nicely:
-        // see http://www.cplusplus.com/reference/string/string/insert/
-        // also, keep this as the last declaration in the class. yes.
-        std::string* *strs[];
 };
 
 class FileViewer : protected Window{
