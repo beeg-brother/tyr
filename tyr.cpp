@@ -1,8 +1,18 @@
+
 #include <curses.h>
 #include <panel.h>
+#include <iostream>
 #include <clocale>
 #include <string>
+#include "filemenu.cpp"
+#include <menu.h>
+#include <filesystem>
+#include <vector>
+#include <assert.h>
+#include <fstream>
 
+namespace fsys = std::filesystem;
+using namespace filemenu;
 
 /* notes on using Cursors:
    line_num should refer to the current line, like normal
@@ -41,7 +51,6 @@ class Window {
             wrefresh(border_win);
             wrefresh(win);
         }
-
 };
 
 class Editor : protected Window{
@@ -164,17 +173,30 @@ class Editor : protected Window{
         // see http://www.cplusplus.com/reference/string/string/insert/
         // also, keep this as the last declaration in the class. yes.
         std::string* *strs[];
+
 };
 
-class FileViewer : protected Window{
-    protected:
-    public:
-        FileViewer(int h, int w, int y0, int x0){
-            Window::create_windows(h, w, y0, x0);
-        }
-        Cursor cursor;
-        void resize(int, int);
+std::vector<std::string> getDirFiles(std::string path){
+	// create the list of files
+	std::vector<std::string> files;
+	// get the other files in the directory
+	for (const auto & entry : fsys::directory_iterator(path)){
+		files.push_back(entry.path().filename());
+	}
+	return files;
+}
 
+class FileViewer : protected Window{
+	protected:
+	public:
+
+		FileViewer(int h, int w, int y0, int x0){
+			Window::create_windows(h, w, y0, x0);
+		}
+		Cursor cursor;
+		// my new version  of menus
+		Menu* nmenu = new Menu();
+		void resize(int, int);
         WINDOW* getWindow(){
             return Window::win;
         }
@@ -208,6 +230,7 @@ class Dialog : protected Window{
         }
 };
 
+
 Editor *ed;
 FileViewer *fs;
 
@@ -228,9 +251,29 @@ void mainLoop(){
     };
 }
 
+void menuInputHandling(FileViewer fs){
+    int c;
+    while((c = getch()) != KEY_BACKSPACE){
+        switch(c){
+            case KEY_DOWN:
+                fs.nmenu->menu_down();
+                break;
+            case KEY_UP:
+                fs.nmenu->menu_up();
+                break;
+            case KEY_RIGHT:
+                fs.nmenu->menu_right();
+                break;
+            case KEY_LEFT:
+                fs.nmenu->menu_left();
+                break;
+        }
+    }
+}
+
 int main() {
 	// sets the locale so that terminals use UTF8 encoding
-    std::setlocale(LC_ALL, "en_US.UTF-8");
+	//std::setlocale(LC_ALL, "en_US.UTF-8");
 	// initializes curses
     initscr();
     // refreshes the screen
@@ -246,6 +289,11 @@ int main() {
     //update the panel stacking
     update_panels();
     doupdate();
+    fsys::path cwd = fsys::current_path();
+    fs.nmenu->setWindow(fs.getWindow());
+    fs.nmenu->setMenuItems(fs.nmenu->getDirFiles(cwd));
+    fs.nmenu->drawMenu();
+    menuInputHandling(fs);
     //focusOnFileViewer(fs);
     mainLoop();
     // close curses
