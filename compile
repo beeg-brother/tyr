@@ -1,2 +1,2 @@
 #!/bin/bash
-g++-8 tyr.cpp filemenu.cpp -lncurses -lpanel -lmenu -std=c++17 -lstdc++fs -o a.out
+g++-8 tyr.cpp filemenu.cpp -lncurses -lpanel -lmenu -std=c++17 -lstdc++fs

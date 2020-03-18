@@ -253,28 +253,7 @@ class Editor : protected Window{
             wrefresh(Window::border_win);
             wrefresh(Window::win);
         }
-        // this is a pointer to an array of pointers. yes its terrible.
-        // see: https://www.geeksforgeeks.org/difference-between-pointer-to-an-array-and-array-of-pointers/
-        // and: http://www.fredosaurus.com/notes-cpp/newdelete/50dynamalloc.html
-        // i'm using a pointer to an array because it allows for dynamic length of the array
-        // i'm using an array of pointers because copying pointers from one array to another should be 100x
-        // more efficient than copying full strings
-        // to access an element of this shit, use (*(*strs)[n]). im sorry.
-        // i can resize strings nicely:
-        // see http://www.cplusplus.com/reference/string/string/insert/
-        // also, keep this as the last declaration in the class. yes.
-        std::string* *strs[];
 };
-
-std::vector<std::string> getDirFiles(std::string path){
-	// create the list of files
-	std::vector<std::string> files;
-	// get the other files in the directory
-	for (const auto & entry : fsys::directory_iterator(path)){
-		files.push_back(entry.path().filename());
-	}
-	return files;
-}
 
 class FileViewer : protected Window{
     protected:
@@ -328,15 +307,6 @@ class Dialog : protected Window{
 Editor *ed;
 FileViewer *fs;
 
-
-void focusOnFileViewer(FileViewer fs){
-    waddstr(fs.getWindow(),"Hey whats poppin gamers");
-    // when we switch to the file viewer we want to hide the cursor
-    curs_set(0);
-    // refresh the file viewer window
-    wrefresh(fs.getWindow());
-}
-
 void mainLoop(){
     int c;
     while(1){
@@ -345,21 +315,21 @@ void mainLoop(){
     };
 }
 
-void menuInputHandling(FileViewer fs){
+void menuInputHandling(FileViewer* fs){
     int c;
     while((c = getch()) != KEY_BACKSPACE){
         switch(c){
             case KEY_DOWN:
-                fs.nmenu->menu_down();
+                fs->nmenu->menu_down();
                 break;
             case KEY_UP:
-                fs.nmenu->menu_up();
+                fs->nmenu->menu_up();
                 break;
             case KEY_RIGHT:
-                fs.nmenu->menu_right();
+                fs->nmenu->menu_right();
                 break;
             case KEY_LEFT:
-                fs.nmenu->menu_left();
+                fs->nmenu->menu_left();
                 break;
         }
     }
@@ -385,11 +355,10 @@ int main() {
     update_panels();
     doupdate();
     fsys::path cwd = fsys::current_path();
-    fs.nmenu->setWindow(fs.getWindow());
-    fs.nmenu->setMenuItems(fs.nmenu->getDirFiles(cwd));
-    fs.nmenu->drawMenu();
+    fs->nmenu->setWindow(fs->getWindow());
+    fs->nmenu->setMenuItems(fs->nmenu->getDirFiles(cwd));
+    fs->nmenu->drawMenu();
     menuInputHandling(fs);
-    //focusOnFileViewer(fs);
     mainLoop();
     // close curses
     endwin();
