@@ -200,13 +200,15 @@ class Editor : protected Window{
                     break;
                 case 127: // BACKSPACE KEY
                     if(cursor.line_position == 0){
-                        cursor.line_position = strs[cursor.line_num - 1].size();
-                        cursor.screen_x = std::min(cursor.line_position, window_width);
-                        strs[cursor.line_num - 1] += strs[cursor.line_num];
-                        strs.erase(strs.begin() + cursor.line_num);
-                        cursor.line_num -= 1;
-                        cursor.screen_y -= 1;
-                        rewrite();
+                        if(cursor.line_num != 0){
+                            cursor.line_position = strs[cursor.line_num - 1].size();
+                            cursor.screen_x = std::min(cursor.line_position, window_width);
+                            strs[cursor.line_num - 1] += strs[cursor.line_num];
+                            strs.erase(strs.begin() + cursor.line_num);
+                            cursor.line_num -= 1;
+                            cursor.screen_y -= 1;
+                            rewrite();
+                        }
                     } else {
 				    	strs[cursor.line_num].erase(cursor.line_position - 1, 1);
                         cursor.screen_x -=1;
