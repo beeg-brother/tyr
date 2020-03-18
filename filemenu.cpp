@@ -28,14 +28,6 @@ namespace filemenu{
 			int window_width;
 			int window_height;
 			int scroll_start = 0;
-			//selected item color
-			
-			//init_pair(0, COLOR_GREEN,COLOR_BLACK);
-			
-			// deselected item color
-			
-			//init_pair(1, COLOR_WHITE,COLOR_BLACK);
-
 			// the index of the currently selected item
 			int current_index;
 			Menu(){
@@ -152,11 +144,12 @@ namespace filemenu{
 				menu_choices.insert(menu_choices.begin() + index + 1,new_elements.begin(), new_elements.end());
 				num_files = menu_choices.size();
 			}
+			// changes the vector of paths that the menu uses
 			void setMenuItems(std::vector<fsys::path> path_vector){
 				menu_choices = path_vector;
 				num_files = path_vector.size();
 			}
-
+			// collapses the directory located in the menu at the given index 
 			void collapseDirectory(int directoryIndex){
 				bool collapseNecessary = false;
 
@@ -188,7 +181,7 @@ namespace filemenu{
 				drawMenu(); 				
 			}
 
-
+			// expands the directory located at the index in the menu
 			void expandDirectory(int directoryIndex){
 
 				bool expansionNecessary = false;
@@ -215,23 +208,15 @@ namespace filemenu{
 					drawMenu();
 				}
 			}
-
-			void checkForFileUpdates(fsys::path path){
-
-			}
-
+			// sets the user selection to the path at the index provided
 			void setCurrentItem(int index){
 				current_index = index;
 			}
-
-			void setCurrentItem(fsys::path path){
-
-			}
-
+			// returns the vector of all the current paths in the menu
 			std::vector<fsys::path> getMenuItems(){
 				return menu_choices;
 			}
-
+			// returns the path of the currently selected item
 			fsys::path getCurrentItem(){
 				return menu_choices[current_index];
 			}
@@ -272,7 +257,7 @@ namespace filemenu{
 				}
 				wrefresh(win);
 			}
-
+			// scrolls the menu items to fit the current item on the screen
 			void scrollToFit(){
 				// if the current index is outside of the range
 				// we need to scroll to fit the current selection onto the screen
