@@ -47,12 +47,19 @@ class Window {
 class Editor : protected Window{
     protected:
     public:
-
+        // vector of strings in memory
         std::vector<std::string> strs;
+
+        // the location of the cursor for this window
+        Cursor cursor;
+
         // TODO: implement scrolling
         int scroll_offset;
+        // number of columns in the editing window
         int window_width;
+        // number of rows in the editing window
         int window_height;
+
 
         Editor(int h, int w, int y0, int x0){
             create_windows(h, w, y0, x0);
@@ -88,12 +95,13 @@ class Editor : protected Window{
             return Window::pan;
         }
 
-        Cursor cursor;
-
+        // TODO: resizing
         void resize(int, int);
 
+        // TODO: figure this out
         void onFocus();
 
+        // redraws all strings after clearing the screen
         void rewrite(){
             // TODO: rewrite the line numbers
             wclear(win);
@@ -200,6 +208,8 @@ class Editor : protected Window{
                     break;
                 case 127: // BACKSPACE KEY
                     if(cursor.line_position == 0){
+                        // if at the start of a line, we have to combine two lines
+                        // if at (0, 0), do nothing
                         if(cursor.line_num != 0){
                             cursor.line_position = strs[cursor.line_num - 1].size();
                             cursor.screen_x = std::min(cursor.line_position, window_width);
@@ -210,25 +220,25 @@ class Editor : protected Window{
                             rewrite();
                         }
                     } else {
+                        // if we're not at the start of a line, just remove the previous character
 				    	strs[cursor.line_num].erase(cursor.line_position - 1, 1);
                         cursor.screen_x -=1;
 					    cursor.line_position -= 1;
+                        // clear the line, then redraw it to update all characters
+                        mvwaddstr(win, cursor.screen_y, 0, std::string(window_width, ' ').data());
+                        mvwaddnstr(win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
                     }
-                    mvwaddstr(win, cursor.screen_y, 0, std::string(window_width, ' ').data());
-                    mvwaddnstr(win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
-                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
                 default:
+                    // just add the character to the string
                     strs[cursor.line_num].insert(cursor.line_position, 1, (char) c);
                     const char* a = strs[cursor.line_num].data();
                     mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
                     wrefresh(Window::win);
                     cursor.screen_x += 1;
                     cursor.line_position += 1;
-                    wmove(Window::win, cursor.screen_y, cursor.screen_x);
                     break;
             }
-            //mvwaddstr(Window::win, cursor.screen_y, cursor.screen_x, strs[cursor.line_num].data());
             // update cursor position
             wmove(Window::win, cursor.screen_y, cursor.screen_x);
             wrefresh(Window::border_win);
