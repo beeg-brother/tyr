@@ -126,7 +126,7 @@ namespace filemenu{
 					werase(win);
 				}
 			}
-			// gets files from the given directory as a vector of strings
+			// gets files from the given directory as a vector of paths
 			std::vector<fsys::path> getDirFiles(fsys::path path){
 				// create the list of files
 				std::vector<fsys::path> files;

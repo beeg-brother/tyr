@@ -84,7 +84,7 @@ class Editor : protected Window{
         // create editor windows, leaving room for line numbering.
         void create_windows(int h, int w, int y0, int x0){
             int line_num_width = 0;
-            int num_rows = screen_rows;
+            int num_rows = window_height;
             // calculate the number of digits in the maximum line number
             while (num_rows){
                 num_rows /= 10;
@@ -273,6 +273,23 @@ class FileViewer : protected Window{
         WINDOW* getWindow(){
             return Window::win;
         }
+
+        void handleInput(int c){
+            switch(c){
+                case KEY_DOWN:
+                    nmenu->menu_down();
+                    break;
+                case KEY_UP:
+                    nmenu->menu_up();
+                    break;
+                case KEY_RIGHT:
+                    nmenu->menu_right();
+                    break;
+                case KEY_LEFT:
+                    nmenu->menu_left();
+                    break;
+            }
+        }
 };
 
 class Dialog : protected Window{
@@ -286,6 +303,7 @@ class Dialog : protected Window{
             //screen_cols = COLS;
             // assuming that we want the max width to be 1/3 of the screen (idk i just picked this #)
             int width = std::min(len, (screen_cols + 2)/3); // this looks jank but stack overflow says this will round the division up
+            
             // determine the number of rows
             int height;
             if (len < width){
@@ -307,6 +325,8 @@ class Dialog : protected Window{
 Editor *ed;
 FileViewer *fs;
 
+
+// TODO: make mainLoop deal with sending input to the right window.... :(
 void mainLoop(){
     int c;
     while(1){
@@ -315,29 +335,8 @@ void mainLoop(){
     };
 }
 
-void menuInputHandling(FileViewer* fs){
-    int c;
-    while((c = getch()) != KEY_BACKSPACE){
-        switch(c){
-            case KEY_DOWN:
-                fs->nmenu->menu_down();
-                break;
-            case KEY_UP:
-                fs->nmenu->menu_up();
-                break;
-            case KEY_RIGHT:
-                fs->nmenu->menu_right();
-                break;
-            case KEY_LEFT:
-                fs->nmenu->menu_left();
-                break;
-        }
-    }
-}
 
 int main() {
-	// sets the locale so that terminals use UTF8 encoding
-	//std::setlocale(LC_ALL, "en_US.UTF-8");
 	// initializes curses
     initscr();
     // refreshes the screen
@@ -358,7 +357,9 @@ int main() {
     fs->nmenu->setWindow(fs->getWindow());
     fs->nmenu->setMenuItems(fs->nmenu->getDirFiles(cwd));
     fs->nmenu->drawMenu();
-    menuInputHandling(fs);
+    while(1){
+        fs->handleInput(getch());
+    };
     mainLoop();
     // close curses
     endwin();
