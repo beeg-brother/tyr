@@ -292,35 +292,76 @@ class FileViewer : protected Window{
         }
 };
 
+
+class DialogElement {
+    public:
+        virtual void handleInput(int c);
+        virtual void refresh(WINDOW* win, int i);
+        
+};
+
+class ButtonsElement : DialogElement {
+
+};
+
+class StringElement : DialogElement {
+    public:
+        const char* message;
+
+        StringElement(const char* str){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
+            message = str;
+        }
+
+        void handleInput(int c){
+            return;
+        }
+
+        void refresh(WINDOW* win, int yval){
+            mvwaddstr(win, yval, 0, message);
+        }
+};
+
 class Dialog : protected Window{
     protected:
+        std::vector<std::shared_ptr<DialogElement>> elements;
+        short currentElement;
     public:
-        Dialog(std::string str){
-            int len = str.size();
-            // get the size of stdscr (fills terminal, so basically get terminal size)
-            getmaxyx(stdscr, screen_rows, screen_cols);
+        Dialog(){
+             getmaxyx(stdscr, screen_rows, screen_cols);
             //screen_rows = LINES;
             //screen_cols = COLS;
             // assuming that we want the max width to be 1/3 of the screen (idk i just picked this #)
-            int width = std::min(len, (screen_cols + 2)/3); // this looks jank but stack overflow says this will round the division up
+            int width = (screen_cols + 2)/3; // this looks jank but stack overflow says this will round the division up
             
-            // determine the number of rows
-            int height;
-            if (len < width){
-                height = 1;
-            } else{
-                height = len/width + (int) (len % width != 0);
-            }
+            // TODO: determine the number of rows
+
             // center dialog box
             int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
             int start_y = (screen_rows + 1)/2 - (height + 1)/2;
             // offsets to account for the border
             Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
-            waddstr(Window::win, str.data());
+            refresh();
             wrefresh(Window::win);
         }
-};
 
+        void refresh(){
+            for(int i = 0; i < elements.size(); i++){
+                elements[i]->refresh(Window::win, i);
+            }
+            wrefresh(Window::win);
+        }
+
+        void handleInput(int c){
+            switch(c){
+                case(KEY_STAB) : {
+                    currentElement = (currentElement + 1) % elements.size();
+                }
+                case(KEY_BTAB) : {
+                    currentElement = (currentElement - 1 + elements.size()) % elements.size();
+                }
+            };
+        }
+};
 
 Editor *ed;
 FileViewer *fs;
