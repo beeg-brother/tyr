@@ -5,12 +5,10 @@
 #include <clocale>
 #include <string>
 #include "filemenu.cpp"
-#include <menu.h>
 #include <filesystem>
 #include <vector>
 #include <assert.h>
 #include <fstream>
-
 namespace fsys = std::filesystem;
 using namespace filemenu;
 
