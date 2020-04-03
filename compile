@@ -1,2 +1,2 @@
 #!/bin/bash
-g++-8 tyr.cpp filemenu.cpp api.cpp -lncurses -lpanel -lmenu -std=c++17 -lstdc++fs
+g++-8 tyr.cpp filemenu.cpp -lncurses -lpanel -lmenu -lzmq -pthread -std=c++17 -lstdc++fs

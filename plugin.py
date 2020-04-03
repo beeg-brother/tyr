@@ -12,17 +12,11 @@ context = zmq.Context()
 socket = context.socket(zmq.REQ)
 # connect to the ipc socket that tyr has made on the other end
 socket.connect("ipc:///tmp/tyrplugins.ipc")
-# send a connection message that lets tyr know that the plugin is communicating
-socket.send_string("READY")
-print("Sent server READY message, waiting on response...")
-handshake = socket.recv().decode('UTF-8')
-
-if (handshake == 'READY'):
-	print("response received, commencing communication")
-	while (True):
-		time.sleep(.5)
-		print("blah")
-
+while (True):
+	time.sleep(3)
+	socket.send_string("Whats poppin")
+	response = socket.recv().decode('UTF-8')
+	print(response)
 # close the connection and terminate the zmq context
 socket.close()
 context.term()
