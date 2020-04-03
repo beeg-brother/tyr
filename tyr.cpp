@@ -343,6 +343,9 @@ void mainLoop(){
 	};
 }
 
+std::string parseMessage(std::string message_contents){
+	return message_contents;
+}
 void start_server(std::string ipc_path){
 	// create the zmq context
 	zmq::context_t context (1);
@@ -357,10 +360,12 @@ void start_server(std::string ipc_path){
 		tyr_socket.recv(&message);
 		std::string message_contents = std::string(static_cast<char*>(message.data()), message.size()); 
 		// parse the message data and do stuff here
-
-		// return acknowledgement message to plugin
-		zmq::message_t reply (2);
-		memcpy(reply.data(), "OK", 2);
+		std::string response;
+		response = parseMessage(message_contents);
+		fs->nmenu->menu_down();
+		//send the message to the plugin with what the plugin requested or w/e
+		zmq::message_t reply (response.length());
+		memcpy(reply.data(), (const void*) response.c_str(), response.length());
 		tyr_socket.send(reply);
 
 	}
@@ -368,8 +373,6 @@ void start_server(std::string ipc_path){
 
 int main() {
 	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
-	// we begin by creating a thread to house the plugin server
-	std::thread server_thread (start_server, ipc_path);
 	// initializes curses
 	initscr();
 	// refreshes the screen
@@ -390,6 +393,8 @@ int main() {
 	fs->nmenu->setWindow(fs->getWindow());
 	fs->nmenu->setMenuItems(fs->nmenu->getDirFiles(cwd));
 	fs->nmenu->drawMenu();
+	// creating a thread to house the plugin server
+	std::thread server_thread (start_server, ipc_path);
 	while(1){
 		fs->handleInput(getch());
 	};

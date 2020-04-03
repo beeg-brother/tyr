@@ -13,10 +13,10 @@ socket = context.socket(zmq.REQ)
 # connect to the ipc socket that tyr has made on the other end
 socket.connect("ipc:///tmp/tyrplugins.ipc")
 while (True):
-	time.sleep(3)
 	socket.send_string("Whats poppin")
 	response = socket.recv().decode('UTF-8')
 	print(response)
+	time.sleep(3)
 # close the connection and terminate the zmq context
 socket.close()
 context.term()
