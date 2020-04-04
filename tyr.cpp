@@ -342,9 +342,91 @@ void mainLoop(){
 		ed->handleInput(c);
 	};
 }
-
+// splits a string via the delimiter and returns the substrings as a vector of strings
+std::vector<std::string> splitString(std::string message_contents, char delim){
+	std::string word = ""; 
+	// to count the number of split strings 
+	int num = 0; 
+	// adding delimiter character at the end 
+	// of 'str' 
+	message_contents = message_contents + delim; 
+  
+	// length of 'str' 
+	int l = message_contents.size(); 
+  
+	// traversing 'str' from left to right 
+	std::vector<std::string> substr_list; 
+	for (int i = 0; i < l; i++) { 
+  
+		// if str[i] is not equal to the delimiter 
+		// character then accumulate it to 'word' 
+		if (message_contents[i] != delim) 
+			word = word + message_contents[i]; 
+  
+		else { 
+  
+			// if 'word' is not an empty string, 
+			// then add this 'word' to the array 
+			// 'substr_list[]' 
+			if ((int)word.size() != 0) 
+				substr_list.push_back(word);
+			// reset 'word' 
+			word = ""; 
+		} 
+	} 
+	// return the splitted strings 
+	return substr_list; 
+}
+// takes in a command string from a plugin and returns the message that tyr will send back
+// it also changes anything that needs to be changed according to the plugin's message
 std::string parseMessage(std::string message_contents){
-	return message_contents;
+	std::string reply;
+	// turn the string into an array of strings, each representing the items
+	std::vector<std::string> message_items = splitString(message_contents,',');
+	// if the message is a getter request
+	if (message_items[0] == "g"){
+		// if the plugin is asking for the editor cursor position
+		if (message_items[1] == "ed_curs"){
+
+		}
+		// if the plugin is asking for the currently selected item in the file viewer
+		if (message_items[1] == "file_curs"){
+			reply = fs->nmenu->getCurrentItem().u8string();
+		}
+		// if the plugin is asking for the character at a certain location
+		if (message_items[1] == "ed_char"){
+			// look at the arguments provided (i guess they'll be coords)
+		}
+
+		// if the plugin is asking for the filename of the currently open file:
+		if (message_items[1] == "filename"){
+			// file opening is not currently implemented yet so we cry
+		}
+		// if the plugin is asking for the length of the currently open file
+		if (message_items[1] == "num_lines"){
+			// cry
+		}
+	}
+	if (message_items[0] == "s"){
+		// these next 4 are just file viewer movement requests
+		if (message_items[1] == "file_down"){
+			fs->nmenu->menu_down();
+			reply = "file viewer moved down";
+		}
+		if (message_items[1] == "file_up"){
+			fs->nmenu->menu_up();
+			reply = "file viewer moved up";
+		}
+		if (message_items[1] == "file_left"){
+			fs->nmenu->menu_left();
+			reply = "file viewer moved left";
+		}
+		if (message_items[1] == "file_right"){
+			fs->nmenu->menu_right();
+			reply = "file viewer moved right";
+		}
+	}
+	return reply;
 }
 void start_server(std::string ipc_path){
 	// create the zmq context
@@ -362,7 +444,6 @@ void start_server(std::string ipc_path){
 		// parse the message data and do stuff here
 		std::string response;
 		response = parseMessage(message_contents);
-		fs->nmenu->menu_down();
 		//send the message to the plugin with what the plugin requested or w/e
 		zmq::message_t reply (response.length());
 		memcpy(reply.data(), (const void*) response.c_str(), response.length());
