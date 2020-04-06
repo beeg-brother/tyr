@@ -397,8 +397,8 @@ std::string parseMessage(std::string message_contents){
 		// if the plugin is asking for the character at a certain location
 		if (message_items[1] == "ed_char"){
 			// look at the arguments provided (i guess they'll be coords)
-			int x_coord = message_items[2];
-			int y_coord = message_items[3];
+			int x_coord = stoi(message_items[2]);
+			int y_coord = stoi(message_items[3]);
 			// some logic that gets the character at that location in the editor window
 		}
 		// if the plugin is asking for the filename of the currently open file:
