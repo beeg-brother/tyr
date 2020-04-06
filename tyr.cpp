@@ -387,7 +387,7 @@ std::string parseMessage(std::string message_contents){
 	if (message_items[0] == "g"){
 		// if the plugin is asking for the editor cursor position
 		if (message_items[1] == "ed_curs"){
-
+			// evan idk how to do this so you're gonna need to do this
 		}
 		// if the plugin is asking for the currently selected item in the file viewer
 		if (message_items[1] == "file_curs"){
@@ -396,8 +396,10 @@ std::string parseMessage(std::string message_contents){
 		// if the plugin is asking for the character at a certain location
 		if (message_items[1] == "ed_char"){
 			// look at the arguments provided (i guess they'll be coords)
+			int x_coord = message_items[2];
+			int y_coord = message_items[3];
+			// some logic that gets the character at that location in the editor window
 		}
-
 		// if the plugin is asking for the filename of the currently open file:
 		if (message_items[1] == "filename"){
 			// file opening is not currently implemented yet so we cry
@@ -406,7 +408,14 @@ std::string parseMessage(std::string message_contents){
 		if (message_items[1] == "num_lines"){
 			// cry
 		}
+		if (message_items[1] == ""){
+
+		}
 	}
+
+
+
+	// if the message is a setter
 	if (message_items[0] == "s"){
 		// these next 4 are just file viewer movement requests
 		if (message_items[1] == "file_down"){
@@ -417,17 +426,21 @@ std::string parseMessage(std::string message_contents){
 			fs->nmenu->menu_up();
 			reply = "file viewer moved up";
 		}
-		if (message_items[1] == "file_left"){
+		if (message_items[1] == "file_collapse"){
 			fs->nmenu->menu_left();
 			reply = "file viewer moved left";
 		}
-		if (message_items[1] == "file_right"){
+		if (message_items[1] == "file_expand"){
 			fs->nmenu->menu_right();
 			reply = "file viewer moved right";
 		}
+
 	}
 	return reply;
 }
+
+
+
 void start_server(std::string ipc_path){
 	// create the zmq context
 	zmq::context_t context (1);
@@ -448,11 +461,11 @@ void start_server(std::string ipc_path){
 		zmq::message_t reply (response.length());
 		memcpy(reply.data(), (const void*) response.c_str(), response.length());
 		tyr_socket.send(reply);
-
 	}
 }
 
 int main() {
+	// we're eventually going to want to read this from a config file
 	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
 	// initializes curses
 	initscr();
