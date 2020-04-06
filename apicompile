@@ -1,0 +1,2 @@
+#!/bin/bash
+g++-8 tyr.cpp api.cpp -lncurses -lpanel -lmenu -lzmq -std=c++17 -lstdc++fs

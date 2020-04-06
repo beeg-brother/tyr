@@ -4,12 +4,20 @@
 #include <iostream>
 #include <clocale>
 #include <string>
+#include <thread>
 #include "filemenu.cpp"
-#include <menu.h>
 #include <filesystem>
 #include <vector>
 #include <assert.h>
 #include <fstream>
+#include <zmq.hpp>
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
+
 
 namespace fsys = std::filesystem;
 using namespace filemenu;
@@ -20,11 +28,11 @@ using namespace filemenu;
    aka: a Cursor with line_position 0 would add a character at position 0 in the string.
 */
 struct Cursor {
-    // position on screen
-    int screen_x, screen_y;
-    // line_num means the nth line in the text (aka the nth element in the string array of the editor)
-    // line_position means the position of the cursor in this line (x-value ish)
-    int line_num, line_position;
+	// position on screen
+	int screen_x, screen_y;
+	// line_num means the nth line in the text (aka the nth element in the string array of the editor)
+	// line_position means the position of the cursor in this line (x-value ish)
+	int line_num, line_position;
 };
 
 int screen_rows, screen_cols;
@@ -329,15 +337,137 @@ Window *focused;
 
 // TODO: make mainLoop deal with sending input to the right window.... :(
 void mainLoop(){
-    int c;
-    while(1){
-        c = getch();
-        ed->handleInput(c);
-    };
+	int c;
+	while(1){
+		c = getch();
+		ed->handleInput(c);
+	};
+}
+// splits a string via the delimiter and returns the substrings as a vector of strings
+std::vector<std::string> splitString(std::string message_contents, char delim){
+	std::string word = ""; 
+	// to count the number of split strings 
+	int num = 0; 
+	// adding delimiter character at the end 
+	// of 'str' 
+	message_contents = message_contents + delim; 
+  
+	// length of 'str' 
+	int l = message_contents.size(); 
+  
+	// traversing 'str' from left to right 
+	std::vector<std::string> substr_list; 
+	for (int i = 0; i < l; i++) { 
+  
+		// if str[i] is not equal to the delimiter 
+		// character then accumulate it to 'word' 
+		if (message_contents[i] != delim) 
+			word = word + message_contents[i]; 
+  
+		else { 
+  
+			// if 'word' is not an empty string, 
+			// then add this 'word' to the array 
+			// 'substr_list[]' 
+			if ((int)word.size() != 0) 
+				substr_list.push_back(word);
+			// reset 'word' 
+			word = ""; 
+		} 
+	} 
+	// return the splitted strings 
+	return substr_list; 
+}
+// takes in a command string from a plugin and returns the message that tyr will send back
+// it also changes anything that needs to be changed according to the plugin's message
+std::string parseMessage(std::string message_contents){
+	std::string reply;
+	// turn the string into an array of strings, each representing the items
+	std::vector<std::string> message_items = splitString(message_contents,',');
+	// if the message is a getter request
+	if (message_items[0] == "g"){
+		// if the plugin is asking for the editor cursor position
+		if (message_items[1] == "ed_curs"){
+			// evan idk how to do this so you're gonna need to do this
+		}
+		// if the plugin is asking for the currently selected item in the file viewer
+		if (message_items[1] == "file_curs"){
+			reply = fs->nmenu->getCurrentItem().u8string();
+		}
+		// if the plugin is asking for the character at a certain location
+		if (message_items[1] == "ed_char"){
+			// look at the arguments provided (i guess they'll be coords)
+			int x_coord = message_items[2];
+			int y_coord = message_items[3];
+			// some logic that gets the character at that location in the editor window
+		}
+		// if the plugin is asking for the filename of the currently open file:
+		if (message_items[1] == "filename"){
+			// file opening is not currently implemented yet so we cry
+		}
+		// if the plugin is asking for the length of the currently open file
+		if (message_items[1] == "num_lines"){
+			// cry
+		}
+		if (message_items[1] == ""){
+
+		}
+	}
+
+
+
+	// if the message is a setter
+	if (message_items[0] == "s"){
+		// these next 4 are just file viewer movement requests
+		if (message_items[1] == "file_down"){
+			fs->nmenu->menu_down();
+			reply = "file viewer moved down";
+		}
+		if (message_items[1] == "file_up"){
+			fs->nmenu->menu_up();
+			reply = "file viewer moved up";
+		}
+		if (message_items[1] == "file_collapse"){
+			fs->nmenu->menu_left();
+			reply = "file viewer moved left";
+		}
+		if (message_items[1] == "file_expand"){
+			fs->nmenu->menu_right();
+			reply = "file viewer moved right";
+		}
+
+	}
+	return reply;
 }
 
 
+
+void start_server(std::string ipc_path){
+	// create the zmq context
+	zmq::context_t context (1);
+	// create the socket that we will be binding
+	zmq::socket_t tyr_socket (context, ZMQ_REP);
+	// bind it to the ipc port/path that plugins will be communicating on
+	tyr_socket.bind(ipc_path);
+	// begin the loop of talking to plugins
+	while (true){
+		// wait for the plugin to send info
+		zmq::message_t message;
+		tyr_socket.recv(&message);
+		std::string message_contents = std::string(static_cast<char*>(message.data()), message.size()); 
+		// parse the message data and do stuff here
+		std::string response;
+		response = parseMessage(message_contents);
+		//send the message to the plugin with what the plugin requested or w/e
+		zmq::message_t reply (response.length());
+		memcpy(reply.data(), (const void*) response.c_str(), response.length());
+		tyr_socket.send(reply);
+	}
+}
+
 int main() {
+	// we're eventually going to want to read this from a config file
+	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
 	// initializes curses
     initscr();
     // refreshes the screen
@@ -359,6 +489,8 @@ int main() {
     fs->nmenu->setWindow(fs->getWindow());
     fs->nmenu->setMenuItems(fs->nmenu->getDirFiles(cwd));
     fs->nmenu->drawMenu();
+    // creating a thread to house the plugin server
+    std::thread server_thread (start_server, ipc_path);
     while(1){
         focused->handleInput(getch());
     };
