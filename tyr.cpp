@@ -37,6 +37,7 @@ class Window {
         PANEL *border_pan;
         WINDOW *border_win;
     public:
+        virtual void handleInput(int) = 0;
         void resize(int, int);
         void onFocus();
         // this method should be called by subclass methods, not called directly
@@ -53,7 +54,7 @@ class Window {
         }
 };
 
-class Editor : protected Window{
+class Editor : public Window{
     protected:
     public:
         // vector of strings in memory
@@ -255,7 +256,7 @@ class Editor : protected Window{
         }
 };
 
-class FileViewer : protected Window{
+class FileViewer : public Window{
     protected:
     public:
         FileViewer(int h, int w, int y0, int x0){
@@ -292,7 +293,7 @@ class FileViewer : protected Window{
         }
 };
 
-class Dialog : protected Window{
+class Dialog : public Window{
     protected:
     public:
         Dialog(std::string str){
@@ -324,7 +325,7 @@ class Dialog : protected Window{
 
 Editor *ed;
 FileViewer *fs;
-
+Window *focused;
 
 // TODO: make mainLoop deal with sending input to the right window.... :(
 void mainLoop(){
@@ -348,6 +349,7 @@ int main() {
     // creates the editor screen
     ed = new Editor(screen_rows-1, screen_cols-20, 0, 20);
     fs = new FileViewer(screen_rows-1, 21, 0, 0);
+    focused = ed;
     //Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
     //update the panel stacking
     //top_panel(ed->getEditorPanel());
@@ -358,7 +360,7 @@ int main() {
     fs->nmenu->setMenuItems(fs->nmenu->getDirFiles(cwd));
     fs->nmenu->drawMenu();
     while(1){
-        fs->handleInput(getch());
+        focused->handleInput(getch());
     };
     mainLoop();
     // close curses
