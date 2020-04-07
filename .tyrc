@@ -1,12 +1,17 @@
-## tyr default configuration file
+##tyr default configuration file
 
-## Plugin API Settings
+##Plugin API Settings
 
-# The ipc path that plugins and tyr will communicate on
-# changing this path will require changing the path in each plugin's config/code
+#The ipc path that plugins and tyr will communicate on
+#changing this path will require changing the path in each plugin's config/code
 
 ipc_path: "ipc:///tmp/tyrplugins.ipc"
 
-# Plugin home path (relative to root tyr directory)
+#Plugin home path (relative to root tyr directory)
 plugin_path: "/plugins"
 
+#Theme path (relative to root tyr directory)
+theme_path: "/themes"
+
+#Selected theme
+theme: "default.tyrtheme"
