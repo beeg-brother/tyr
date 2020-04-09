@@ -1,7 +1,5 @@
 ##tyr default configuration file
 
-##Plugin API Settings
-
 #The ipc path that plugins and tyr will communicate on
 #changing this path will require changing the path in each plugin's config/code
 
@@ -15,3 +13,6 @@ theme_path: "/themes"
 
 #Selected theme
 theme: "default.tyrtheme"
+
+# Error log path (relative to root tyr directory)
+log_path: "/logs"

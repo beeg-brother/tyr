@@ -380,6 +380,8 @@ std::vector<std::string> splitString(std::string message_contents, char delim){
 }
 // takes in a command string from a plugin and returns the message that tyr will send back
 // it also changes anything that needs to be changed according to the plugin's message
+//TODO: get evan to write the parts involving the editor
+//TODO: write the parts that don't involve the editor
 std::string parseMessage(std::string message_contents){
 	std::string reply;
 	// turn the string into an array of strings, each representing the items
@@ -466,10 +468,14 @@ void start_server(std::string ipc_path){
 }
 
 int main() {
-	// we're eventually going to want to read this from a config file
+	//TODO: read this from a config file
 	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
 	// initializes curses
     initscr();
+    // start the color system
+    //TODO: read theme from .tyrc and /themes folder
+    start_color();
+    
     // refreshes the screen
     refresh();
     cbreak();
