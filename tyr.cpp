@@ -159,6 +159,7 @@ class Editor : public Window{
         // deals with the input of characters to the editor.
         // typing, arrow keys, etc.
         void handleInput(int c){
+        	curs_set(1);
             switch (c){
                 case KEY_RIGHT:
                     if(strs[cursor.line_num].size() > cursor.line_position){ // check if its valid to move over a character
@@ -522,6 +523,7 @@ int main() {
     fs->nmenu->drawMenu();
     // creating a thread to house the plugin server
     std::thread server_thread (start_server, ipc_path);
+    curs_set(1);
     while(1){
         focused->handleInput(getch());
     };
