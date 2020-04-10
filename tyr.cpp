@@ -35,35 +35,31 @@ struct Cursor {
 	int line_num, line_position;
 };
 
-struct Theme {
-
-};
-
 int screen_rows, screen_cols;
 
 class Window {
-    public:
-        int width, height;
-        PANEL *pan;
-        WINDOW *win;
-        PANEL *border_pan;
-        WINDOW *border_win;
-        virtual void handleInput(int) = 0;
-        virtual void onFocus() = 0;
-        virtual void deFocus() = 0;
-        void resize(int, int);
-        // this method should be called by subclass methods, not called directly
-        void create_windows(int outer_h, int outer_w, int outer_y0, int outer_x0, int inner_h, int inner_w, int inner_y0, int inner_x0){
-            width = outer_w;
-            height = outer_h;
-            border_win = newwin(outer_h, outer_w, outer_y0, outer_x0);
-            wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
-            border_pan = new_panel(border_win);
-            win = newwin(inner_h, inner_w, inner_y0, inner_x0);
-            pan = new_panel(win);
-            wrefresh(border_win);
-            wrefresh(win);
-        }
+	protected:
+		int width, height;
+		PANEL *pan;
+		WINDOW *win;
+		PANEL *border_pan;
+		WINDOW *border_win;
+	public:
+		virtual void handleInput(int) = 0;
+		void resize(int, int);
+		void onFocus();
+		// this method should be called by subclass methods, not called directly
+		void create_windows(int outer_h, int outer_w, int outer_y0, int outer_x0, int inner_h, int inner_w, int inner_y0, int inner_x0){
+			width = outer_w;
+			height = outer_h;
+			border_win = newwin(outer_h, outer_w, outer_y0, outer_x0);
+			wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+			border_pan = new_panel(border_win);
+			win = newwin(inner_h, inner_w, inner_y0, inner_x0);
+			pan = new_panel(win);
+			wrefresh(border_win);
+			wrefresh(win);
+		}
 };
 
 class Editor : public Window{
@@ -122,24 +118,21 @@ class Editor : public Window{
 		// TODO: figure this out
 		void onFocus();
 
-        // TODO: do this
-        void deFocus();
-
-        void rewrite_line_nums(){
-            // clear
-            wclear(Window::border_win);
-            // redraw border
-            wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
-            // count number of digits in max line num
-            int num_rows = getmaxy(Window::win);
-            int line_num_width = 0;
-            while (num_rows != 0){
-                num_rows /= 10;
-                line_num_width++;
-            }
-            // use this pointer for the formatting - possible performance gain
-            char* out = new char[line_num_width];
-            int max = std::min(window_height, static_cast<int>(strs.size()));
+		void rewrite_line_nums(){
+			// clear
+			wclear(Window::border_win);
+			// redraw border
+			wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+			// count number of digits in max line num
+			int num_rows = getmaxy(Window::win);
+			int line_num_width = 0;
+			while (num_rows != 0){
+				num_rows /= 10;
+				line_num_width++;
+			}
+			// use this pointer for the formatting - possible performance gain
+			char* out = new char[line_num_width];
+			int max = std::min(window_height, static_cast<int>(strs.size()));
 
 			for(int i = scroll_offset + 1; i <= scroll_offset + max; i++){
 				// create a right-padded string for the line number
@@ -312,15 +305,9 @@ class FileViewer : public Window{
 		Menu* nmenu = new Menu();
 		void resize(int, int);
 
-        // TODO: migrate cursor changing events to here from Menu
-        void onFocus();
-
-        // TODO: migrate cursor changing events to here from Menu
-        void deFocus();
-
-        void create_windows(int h, int w, int y0, int x0){
-            Window::create_windows(h, w, y0, x0, h - 2, w - 2, y0 + 1, x0 + 1);
-        }
+		void create_windows(int h, int w, int y0, int x0){
+			Window::create_windows(h, w, y0, x0, h - 2, w - 2, y0 + 1, x0 + 1);
+		}
 
 		WINDOW* getWindow(){
 			return Window::win;
@@ -510,51 +497,39 @@ void start_server(std::string ipc_path){
 	}
 }
 
-// TODO
-void loadConfigs();
-
-void init(){
-    initscr();
-    // start the color system
-    //TODO: read theme from .tyrc and /themes folder
-    start_color();
-
-    // refreshes the screen
-    refresh();
-    cbreak();
-    noecho();
-    keypad(stdscr, true);
-    getmaxyx(stdscr, screen_rows, screen_cols);
-}
-
-
 int main() {
 	//TODO: read this from a config file
 	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
 	// initializes curses
+	initscr();
+	// start the color system
+	//TODO: read theme from .tyrc and /themes folder
+	start_color();
+	
+	// refreshes the screen
+	refresh();
+	cbreak();
+	noecho();
+	keypad(stdscr, true);
+	getmaxyx(stdscr, screen_rows, screen_cols);
+	// creates the editor screen
+	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
+	fs = new FileViewer(screen_rows, 21, 0, 0);
+	focused = ed;
+	//Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
+	//update the panel stacking
+	//top_panel(ed->getEditorPanel());
+	update_panels();
+	doupdate();
 
-    // creates the editor screen
-    ed = new Editor(screen_rows, screen_cols-20, 0, 20);
-    fs = new FileViewer(screen_rows, 21, 0, 0);
-    focused = ed;
-
-    update_panels();
-    doupdate();
-    // TODO: hersh migrate this stuff to the init of Menu
-    fsys::path cwd = fsys::current_path();
-    fs->nmenu->setWindow(fs->getWindow());
-    fs->nmenu->setMenuItems(fs->nmenu->getDirFiles(cwd));
-    fs->nmenu->drawMenu();
-
-    // creating a thread to house the plugin server
-    std::thread server_thread (start_server, ipc_path);
-    curs_set(1);
-    while(1){
-        focused->handleInput(getch());
-        wrefresh(fs->border_win);
-    };
-    mainLoop();
-    // close curses
-    endwin();
-    return 0;
+	// creating a thread to house the plugin server
+	std::thread server_thread (start_server, ipc_path);
+	curs_set(1);
+	while(1){
+		focused->handleInput(getch());
+	};
+	mainLoop();
+	// close curses
+	endwin();
+	return 0;
 }
