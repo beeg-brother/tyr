@@ -59,6 +59,7 @@ namespace filemenu{
 				// check to make sure that there is a window that the menu is attached to
 				if (win != nullptr){
 					scrollToFit();
+					//TODO: eventually migrate this to onFocus and deFocus
 					curs_set(0);
 					for (int currenty = scroll_start; currenty < scroll_start + window_height; currenty++){
 						if (currenty < num_files){
