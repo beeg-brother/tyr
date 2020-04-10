@@ -262,6 +262,13 @@ class Editor : public Window{
 			wrefresh(Window::border_win);
 			wrefresh(Window::win);
 		}
+
+		int get_line_number(){
+			return cursor.line_num;
+		}
+		int get_line_position(){
+			return cursor.line_position;
+		}
 };
 
 class FileViewer : public Window{
@@ -307,8 +314,9 @@ class StatusBar{
 		WINDOW *win;
 		PANEL *pan;
 	public:
-		int cursor_x = 0;
-		int cursor_y = 0;
+		// line number and line pos
+		int ln = 0;
+		int lp = 0;
 		std::string filename;
 		std::string syntax;
 
@@ -323,12 +331,14 @@ class StatusBar{
 		void resize(int, int);
 		// draws the status bar onto the screen.
 		void draw_status(){
-
+			waddstr(win, std::to_string(ln).c_str());
 		}
 
 		// update the info in the status bar
-		void reload(){
-			wclear();
+		void update(int line_num, int line_pos){
+			lp = line_pos;
+			ln = line_num; 
+			wclear(win);
 			draw_status();
 			wrefresh(win);
 		}
@@ -521,6 +531,7 @@ int main() {
 	ed = new Editor(screen_rows-1, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows-1, 21, 0, 0);
 	sb = new StatusBar(1, screen_cols, screen_rows - 1, 0);
+	sb->update(ed->get_line_number(), ed->get_line_position());
 	focused = ed;
 	//Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
 	//update the panel stacking
