@@ -35,16 +35,20 @@ struct Cursor {
 	int line_num, line_position;
 };
 
+struct Theme {
+
+};
+
 int screen_rows, screen_cols;
 
 class Window {
-	protected:
+	public:
 		int width, height;
 		PANEL *pan;
 		WINDOW *win;
 		PANEL *border_pan;
 		WINDOW *border_win;
-	public:
+
 		virtual void handleInput(int) = 0;
 		void resize(int, int);
 		void onFocus();
@@ -497,37 +501,39 @@ void start_server(std::string ipc_path){
 	}
 }
 
+void curses_setup(){
+    // initialize curses
+    initscr();
+    // start color system
+    start_color();
+    // refresh screen
+    refresh();
+    cbreak();
+    noecho();
+    keypad(stdscr, true);
+    getmaxyx(stdscr, screen_rows, screen_cols);
+
+}
+
 int main() {
+    curses_setup();
+
 	//TODO: read this from a config file
 	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
-	// initializes curses
-	initscr();
-	// start the color system
+
 	//TODO: read theme from .tyrc and /themes folder
-	start_color();
-	
-	// refreshes the screen
-	refresh();
-	cbreak();
-	noecho();
-	keypad(stdscr, true);
-	getmaxyx(stdscr, screen_rows, screen_cols);
+
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0);
 	focused = ed;
-	//Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
-	//update the panel stacking
-	//top_panel(ed->getEditorPanel());
+
 	update_panels();
 	doupdate();
 
 	// creating a thread to house the plugin server
 	std::thread server_thread (start_server, ipc_path);
 	curs_set(1);
-	while(1){
-		focused->handleInput(getch());
-	};
 	mainLoop();
 	// close curses
 	endwin();
