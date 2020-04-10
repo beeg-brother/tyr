@@ -1,4 +1,4 @@
-
+#include <cstdio>
 #include <curses.h>
 #include <panel.h>
 #include <iostream>
@@ -84,11 +84,10 @@ class Editor : public Window{
             cursor = Cursor();
             cursor.screen_x = 0;
             cursor.screen_y = 0;
-            // TODO: get rid of this, make an actual good line number gen
-            mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(1).c_str());
             strs.push_back(std::string());
             scroll_offset = 0;
             getmaxyx(win, window_height, window_width);
+            rewrite();
         }
 
         // create editor windows, leaving room for line numbering.
@@ -119,12 +118,40 @@ class Editor : public Window{
         // TODO: figure this out
         void onFocus();
 
+        void rewrite_line_nums(){
+            // clear
+            wclear(Window::border_win);
+            // redraw border
+            wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+            // count number of digits in max line num
+            int num_rows = getmaxy(Window::win);
+            int line_num_width = 0;
+            while (num_rows != 0){
+                num_rows /= 10;
+                line_num_width++;
+            }
+            // use this pointer for the formatting - possible performance gain
+            char* out = new char[line_num_width];
+            int max = std::min(window_height, static_cast<int>(strs.size()));
+
+            for(int i = scroll_offset + 1; i <= scroll_offset + max; i++){
+                // create a right-padded string for the line number
+                std::sprintf(out, "%*d", line_num_width, i);
+                mvwaddstr(Window::border_win, i, 1, out);
+            }
+            // no mem-leaks pls
+            delete out;
+            wrefresh(border_win);
+        }
+
         // redraws all strings after clearing the screen
         void rewrite(){
-            // TODO: rewrite the line numbers
+            rewrite_line_nums();
             wclear(win);
-            for(int i = 0; i < std::min(screen_rows, (int) strs.size()); i++){
-                mvwaddnstr(win, i, 0, strs[i].data(), window_width);
+            // TODO: this doesn't work
+            int max = std::min(window_height, static_cast<int>(strs.size()));
+            for(int i = 0; i < max; i++){
+                mvwaddnstr(Window::win, i, 0, strs[i].c_str(), window_width);
             }
             wrefresh(win);
         }
@@ -221,8 +248,6 @@ class Editor : public Window{
 
                     rewrite();
 
-                    // TODO: having this here is hacky, change it
-                    mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(cursor.screen_y+1).c_str());
                     break;
                 case 127: // BACKSPACE KEY
                     if(cursor.line_position == 0){
