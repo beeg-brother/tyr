@@ -84,6 +84,7 @@ class Editor : public Window{
             cursor = Cursor();
             cursor.screen_x = 0;
             cursor.screen_y = 0;
+            // TODO: get rid of this, make an actual good line number gen
             mvwaddstr(Window::border_win, cursor.screen_y+1, 1, std::to_string(1).c_str());
             strs.push_back(std::string());
             scroll_offset = 0;
@@ -93,13 +94,12 @@ class Editor : public Window{
         // create editor windows, leaving room for line numbering.
         void create_windows(int h, int w, int y0, int x0){
             int line_num_width = 0;
-            int num_rows = window_height;
+            int last_row_num = scroll_offset + (h - 2);
             // calculate the number of digits in the maximum line number
-            while (num_rows){
-                num_rows /= 10;
+            while (last_row_num != 0){
+                last_row_num /= 10;
                 line_num_width++;
             }
-
             Window::create_windows(h, w, y0, x0, h - 2, w - 2 - line_num_width, y0 + 1, x0 + 1 + line_num_width);
         }
 
@@ -340,7 +340,7 @@ void mainLoop(){
 	int c;
 	while(1){
 		c = getch();
-		ed->handleInput(c);
+		focused->handleInput(c);
 	};
 }
 // splits a string via the delimiter and returns the substrings as a vector of strings
@@ -483,8 +483,8 @@ int main() {
     keypad(stdscr, true);
     getmaxyx(stdscr, screen_rows, screen_cols);
     // creates the editor screen
-    ed = new Editor(screen_rows-1, screen_cols-20, 0, 20);
-    fs = new FileViewer(screen_rows-1, 21, 0, 0);
+    ed = new Editor(screen_rows, screen_cols-20, 0, 20);
+    fs = new FileViewer(screen_rows, 21, 0, 0);
     focused = ed;
     //Dialog dia ("how's this???? is this enough lines to trigger wrap yet????");
     //update the panel stacking
