@@ -363,11 +363,11 @@ class DialogElement {
         
 };
 
-class ButtonsElement : DialogElement {
+class ButtonsElement : public DialogElement {
 
 };
 
-class StringElement : DialogElement {
+class StringElement : public DialogElement {
     public:
         const char* message;
 
@@ -384,11 +384,12 @@ class StringElement : DialogElement {
         }
 };
 
-class Dialog : protected Window{
+class Dialog : public Window{
     protected:
         std::vector<std::shared_ptr<DialogElement>> elements;
         short currentElement;
     public:
+
         Dialog(){
              getmaxyx(stdscr, screen_rows, screen_cols);
             //screen_rows = LINES;
@@ -397,12 +398,14 @@ class Dialog : protected Window{
             int width = (screen_cols + 2)/3; // this looks jank but stack overflow says this will round the division up
             
             // TODO: determine the number of rows
+            int height = 5;
 
             // center dialog box
             int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
             int start_y = (screen_rows + 1)/2 - (height + 1)/2;
             // offsets to account for the border
             Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
+            elements.push_back(std::make_shared<StringElement>("testing"));
             refresh();
             wrefresh(Window::win);
         }
@@ -423,6 +426,17 @@ class Dialog : protected Window{
                     currentElement = (currentElement - 1 + elements.size()) % elements.size();
                 }
             };
+        }
+
+        // TODO: these
+        void resize(int, int){
+            return;
+        }
+        void onFocus(){
+            return;
+        }
+        void deFocus(){
+            return;
         }
 };
 
@@ -587,6 +601,7 @@ int main() {
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0);
+	Dialog * dia = new Dialog();
 	focused = ed;
 
 	update_panels();
