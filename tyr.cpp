@@ -50,8 +50,9 @@ class Window {
 		WINDOW *border_win;
 
 		virtual void handleInput(int) = 0;
-		void resize(int, int);
-		void onFocus();
+		virtual void onFocus() = 0;
+		virtual void deFocus() = 0;
+		virtual void resize(int, int) = 0;
 		// this method should be called by subclass methods, not called directly
 		void create_windows(int outer_h, int outer_w, int outer_y0, int outer_x0, int inner_h, int inner_w, int inner_y0, int inner_x0){
 			width = outer_w;
@@ -117,10 +118,9 @@ class Editor : public Window{
 		}
 
 		// TODO: resizing
-		void resize(int, int);
-
-		// TODO: figure this out
-		void onFocus();
+		void resize(int, int){
+		    return;
+		};
 
 		void rewrite_line_nums(){
 			// clear
@@ -158,6 +158,14 @@ class Editor : public Window{
 				mvwaddnstr(Window::win, i, 0, strs[i].c_str(), window_width);
 			}
 			wrefresh(win);
+		}
+
+		void onFocus(){
+		    return;
+		}
+
+		void deFocus(){
+		    return;
 		}
 
 		// deals with the input of characters to the editor.
@@ -307,7 +315,11 @@ class FileViewer : public Window{
 		Cursor cursor;
 		// my new version  of menus
 		Menu* nmenu = new Menu();
-		void resize(int, int);
+
+		// TODO: resizing
+		void resize(int, int){
+		    return;
+		};
 
 		void create_windows(int h, int w, int y0, int x0){
 			Window::create_windows(h, w, y0, x0, h - 2, w - 2, y0 + 1, x0 + 1);
@@ -316,6 +328,14 @@ class FileViewer : public Window{
 		WINDOW* getWindow(){
 			return Window::win;
 		}
+
+        void onFocus(){
+            return;
+        }
+
+        void deFocus(){
+            return;
+        }
 
 		void handleInput(int c){
 			switch(c){
