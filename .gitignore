@@ -1,4 +1,6 @@
 .vscode/*
+.idea/*
+
 a.out
 
 tyr
