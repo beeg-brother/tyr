@@ -358,13 +358,19 @@ class FileViewer : public Window{
 
 class DialogElement {
     public:
-        virtual void handleInput(int c);
-        virtual void refresh(WINDOW* win, int i);
+        virtual void handleInput(int c) = 0;
+        virtual void refresh(WINDOW* win, int i) = 0;
         
 };
 
 class ButtonsElement : public DialogElement {
-
+    public:
+        void handleInput(int c){
+            return;
+        }
+        void refresh(WINDOW* win, int i){
+            return;
+        }
 };
 
 class StringElement : public DialogElement {
@@ -428,16 +434,18 @@ class Dialog : public Window{
             };
         }
 
-        // TODO: these
-        void resize(int, int){
-            return;
-        }
-        void onFocus(){
-            return;
-        }
-        void deFocus(){
-            return;
-        }
+    // TODO: these
+    void resize(int, int){
+        return;
+    }
+
+    void onFocus(){
+        return;
+    }
+
+    void deFocus(){
+        return;
+    }
 };
 
 Editor *ed;
