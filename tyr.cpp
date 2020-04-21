@@ -36,8 +36,30 @@ struct Cursor {
 };
 
 struct Theme {
+    short borderFocused;
+    short borderUnfocused;
+    short text;
+    short directories;
+    short files;
+    short lineNumbers;
+} theme;
 
-};
+//TODO: make themes work with config files
+void theme_setup(){
+    init_pair(1, COLOR_RED, COLOR_BLUE);
+    theme.borderFocused = 1;
+    init_pair(2, COLOR_YELLOW, 21);
+    theme.borderUnfocused = 2;
+    init_pair(3, 236, 250);
+    theme.text = 3;
+    init_pair(4, COLOR_RED, COLOR_BLUE);
+    theme.directories = 4;
+    init_pair(5, COLOR_YELLOW, 21);
+    theme.files = 5;
+    init_pair(6, 236, 250);
+    theme.lineNumbers = 6;
+    return;
+}
 
 int screen_rows, screen_cols;
 
@@ -58,12 +80,23 @@ class Window {
 			width = outer_w;
 			height = outer_h;
 			border_win = newwin(outer_h, outer_w, outer_y0, outer_x0);
-			wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+			drawBorder(COLOR_PAIR(theme.borderFocused));
 			border_pan = new_panel(border_win);
 			win = newwin(inner_h, inner_w, inner_y0, inner_x0);
 			pan = new_panel(win);
 			wrefresh(border_win);
 			wrefresh(win);
+		}
+
+		void drawBorder(int attrs){
+            wborder(border_win, (ACS_VLINE | attrs),
+                    (ACS_VLINE | attrs),
+                    (ACS_HLINE | attrs),
+                    (ACS_HLINE | attrs),
+                    (ACS_ULCORNER | attrs),
+                    (ACS_URCORNER | attrs),
+                    (ACS_LLCORNER | attrs),
+                    (ACS_LRCORNER | attrs));
 		}
 };
 
@@ -126,7 +159,7 @@ class Editor : public Window{
 			// clear
 			wclear(Window::border_win);
 			// redraw border
-			wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+			drawBorder(COLOR_PAIR(theme.borderFocused));
 			// count number of digits in max line num
 			int num_rows = getmaxy(Window::win);
 			int line_num_width = 0;
@@ -141,6 +174,7 @@ class Editor : public Window{
 			for(int i = scroll_offset + 1; i <= scroll_offset + max; i++){
 				// create a right-padded string for the line number
 				std::sprintf(out, "%*d", line_num_width, i);
+				wattron(win, COLOR_PAIR(theme.lineNumbers));
 				mvwaddstr(Window::border_win, i, 1, out);
 			}
 			// no mem-leaks pls
@@ -155,6 +189,7 @@ class Editor : public Window{
 			// TODO: this doesn't work
 			int max = std::min(window_height, static_cast<int>(strs.size()));
 			for(int i = 0; i < max; i++){
+                wattron(win, COLOR_PAIR(theme.text));
 				mvwaddnstr(Window::win, i, 0, strs[i].c_str(), window_width);
 			}
 			wrefresh(win);
@@ -289,7 +324,8 @@ class Editor : public Window{
 					// just add the character to the string
 					strs[cursor.line_num].insert(cursor.line_position, 1, (char) c);
 					const char* a = strs[cursor.line_num].data();
-					mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+                    wattron(win, COLOR_PAIR(theme.text));
+                    mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
 					wrefresh(Window::win);
 					cursor.screen_x += 1;
 					cursor.line_position += 1;
@@ -418,6 +454,7 @@ class Dialog : public Window{
 
         void refresh(){
             for(int i = 0; i < elements.size(); i++){
+                wattron(win, COLOR_PAIR(theme.text));
                 elements[i]->refresh(Window::win, i);
             }
             wrefresh(Window::win);
@@ -457,6 +494,11 @@ void mainLoop(){
 	int c;
 	while(1){
 		c = getch();
+//		switch(c){
+//		    case (KEY_ATAB & 037):
+//		        focused->deFocus();
+//
+//		}
 		focused->handleInput(c);
 	};
 }
@@ -589,17 +631,19 @@ void curses_setup(){
     initscr();
     // start color system
     start_color();
+    use_default_colors();
     // refresh screen
     refresh();
     cbreak();
     noecho();
     keypad(stdscr, true);
     getmaxyx(stdscr, screen_rows, screen_cols);
-
 }
 
 int main() {
     curses_setup();
+
+    theme_setup();
 
 	//TODO: read this from a config file
 	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
