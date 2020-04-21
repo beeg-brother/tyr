@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <fstream>
 #include <zmq.hpp>
+#include <map>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -297,7 +298,7 @@ class Editor : public Window{
 					rewrite();
 
 					break;
-				case 127: // BACKSPACE KEY
+				case KEY_BACKSPACE: // BACKSPACE KEY
 					if(cursor.line_position == 0){
 						// if at the start of a line, we have to combine two lines
 						// if at (0, 0), do nothing
@@ -639,17 +640,38 @@ void curses_setup(){
     keypad(stdscr, true);
     getmaxyx(stdscr, screen_rows, screen_cols);
 }
+std::map<std::string, std::string> read_config(){
+	std::map<std::string, std::string> dict;
+	std::ifstream inputFile(".tyrc");
+	std::string line;
+	while (std::getline(inputFile, line)){
+		// check to see if the line starts with a comment, if so, we ignore it and move on
+		if (line[0] == '#' or line[0] == ' '){
+			continue;
+		}
+		else{
+			// check to make sure its not doing an empty line
+			if (line.size() != 0){	
+				// find the occurrence of the first colon:
+				int colon_index = line.find(':');
+				dict[line.substr(0,colon_index)] = line.substr(colon_index + 1);
+			}
+		}
+
+	}
+	return dict;
+}
 
 int main() {
     curses_setup();
-
     theme_setup();
-
-	//TODO: read this from a config file
-	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
-
+    std::map<std::string,std::string> config_settings = read_config();
+	std::string ipc_path = config_settings["ipc_path"];
 	//TODO: read theme from .tyrc and /themes folder
-
+	std::string theme_path = config_settings["theme_path"];
+	std::string theme_file_name = config_settings["theme"];
+	fsys::path theme_file_path = fsys::u8path(theme_path + "/" +theme_file_name);
+	
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0);
