@@ -45,19 +45,76 @@ struct Theme {
     short lineNumbers;
 } theme;
 
+// splits a string via the delimiter and returns the substrings as a vector of strings
+std::vector<std::string> splitString(std::string message_contents, char delim){
+	std::string word = ""; 
+	// to count the number of split strings 
+	int num = 0; 
+	// adding delimiter character at the end 
+	// of 'str' 
+	message_contents = message_contents + delim; 
+  
+	// length of 'str' 
+	int l = message_contents.size(); 
+  
+	// traversing 'str' from left to right 
+	std::vector<std::string> substr_list; 
+	for (int i = 0; i < l; i++) { 
+  
+		// if str[i] is not equal to the delimiter 
+		// character then accumulate it to 'word' 
+		if (message_contents[i] != delim) 
+			word = word + message_contents[i]; 
+  
+		else { 
+  
+			// if 'word' is not an empty string, 
+			// then add this 'word' to the array 
+			// 'substr_list[]' 
+			if ((int)word.size() != 0) 
+				substr_list.push_back(word);
+			// reset 'word' 
+			word = ""; 
+		} 
+	} 
+	// return the splitted strings 
+	return substr_list; 
+}
+
 //TODO: make themes work with config files
-void theme_setup(){
-    init_pair(1, COLOR_RED, COLOR_BLUE);
+void theme_setup(std::map<std::string, std::string> config_settings){
+	std::string theme_path = config_settings["theme_path"];
+	std::string theme_file_name = config_settings["theme"];
+	// open up the theme file
+	//TODO: check for the existence of the theme file
+	std::ifstream inputFile(theme_path + "/" + theme_file_name);
+	std::string line;
+	std::vector<std::vector<int>> color_vec;
+	std::map<std::string,int> color_map;
+	// read through the theme file
+	while (std::getline(inputFile, line)){
+		// ignore commented lines
+		if (line[0] != '#'){
+			// ignore empty lines
+			if (line.size() != 0){
+				int colon_index = line.find(':');
+				color_map[line.substr(0,colon_index)] = stoi(line.substr(colon_index + 1));
+			}
+		}
+	}
+	inputFile.close();
+
+    init_pair(1, color_map["borderFocused"], -1);
     theme.borderFocused = 1;
-    init_pair(2, COLOR_YELLOW, 21);
+    init_pair(2, color_map["borderUnfocused"], -1);
     theme.borderUnfocused = 2;
-    init_pair(3, 236, 250);
+    init_pair(3, color_map["text"], -1);
     theme.text = 3;
-    init_pair(4, COLOR_RED, COLOR_BLUE);
+    init_pair(4, color_map["directories"], -1);
     theme.directories = 4;
-    init_pair(5, COLOR_YELLOW, 21);
+    init_pair(5, color_map["files"], -1);
     theme.files = 5;
-    init_pair(6, 236, 250);
+    init_pair(6, color_map["lineNumbers"], -1);
     theme.lineNumbers = 6;
     return;
 }
@@ -503,41 +560,7 @@ void mainLoop(){
 		focused->handleInput(c);
 	};
 }
-// splits a string via the delimiter and returns the substrings as a vector of strings
-std::vector<std::string> splitString(std::string message_contents, char delim){
-	std::string word = ""; 
-	// to count the number of split strings 
-	int num = 0; 
-	// adding delimiter character at the end 
-	// of 'str' 
-	message_contents = message_contents + delim; 
-  
-	// length of 'str' 
-	int l = message_contents.size(); 
-  
-	// traversing 'str' from left to right 
-	std::vector<std::string> substr_list; 
-	for (int i = 0; i < l; i++) { 
-  
-		// if str[i] is not equal to the delimiter 
-		// character then accumulate it to 'word' 
-		if (message_contents[i] != delim) 
-			word = word + message_contents[i]; 
-  
-		else { 
-  
-			// if 'word' is not an empty string, 
-			// then add this 'word' to the array 
-			// 'substr_list[]' 
-			if ((int)word.size() != 0) 
-				substr_list.push_back(word);
-			// reset 'word' 
-			word = ""; 
-		} 
-	} 
-	// return the splitted strings 
-	return substr_list; 
-}
+
 // takes in a command string from a plugin and returns the message that tyr will send back
 // it also changes anything that needs to be changed according to the plugin's message
 //TODO: get evan to write the parts involving the editor
@@ -642,6 +665,7 @@ void curses_setup(){
 }
 std::map<std::string, std::string> read_config(){
 	std::map<std::string, std::string> dict;
+	//TODO: error catching for when the .tyrc file doesn't exist
 	std::ifstream inputFile(".tyrc");
 	std::string line;
 	while (std::getline(inputFile, line)){
@@ -659,23 +683,23 @@ std::map<std::string, std::string> read_config(){
 		}
 
 	}
+	inputFile.close();
 	return dict;
 }
 
 int main() {
     curses_setup();
-    theme_setup();
+    // read the config file
     std::map<std::string,std::string> config_settings = read_config();
+    theme_setup(config_settings);
+    // set up the ipc path according to the config file
 	std::string ipc_path = config_settings["ipc_path"];
-	//TODO: read theme from .tyrc and /themes folder
-	std::string theme_path = config_settings["theme_path"];
-	std::string theme_file_name = config_settings["theme"];
-	fsys::path theme_file_path = fsys::u8path(theme_path + "/" +theme_file_name);
+	
 	
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0);
-	Dialog * dia = new Dialog();
+	//Dialog * dia = new Dialog();
 	focused = ed;
 
 	update_panels();
