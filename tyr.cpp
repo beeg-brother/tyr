@@ -2,6 +2,7 @@
 #include <curses.h>
 #include <panel.h>
 #include <iostream>
+#include <fstream>
 #include <clocale>
 #include <string>
 #include <thread>
@@ -13,6 +14,7 @@
 #include <fstream>
 #include <zmq.hpp>
 #include <map>
+#include <chrono>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -36,8 +38,63 @@ struct Cursor {
 	// line_position means the position of the cursor in this line (x-value ish)
 	int line_num, line_position;
 };
+// gets the current time as a string timestamp
+std::string getCurrentTime(){
+	time_t _tm =time(NULL );
+	struct tm * curtime = localtime ( &_tm );
+	std::string time = asctime(curtime);
+	return time;
+}
 
+std::map<std::string, std::string> read_config(){
+	std::map<std::string, std::string> dict;
+	//TODO: error catching for when the .tyrc file doesn't exist
+	std::ifstream inputFile(".tyrc");
+	std::string line;
+	while (std::getline(inputFile, line)){
+		// check to see if the line starts with a comment, if so, we ignore it and move on
+		if (line[0] == '#' or line[0] == ' '){
+			continue;
+		}
+		else{
+			// check to make sure its not doing an empty line
+			if (line.size() != 0){	
+				// find the occurrence of the first colon:
+				int colon_index = line.find(':');
+				dict[line.substr(0,colon_index)] = line.substr(colon_index + 1);
+			}
+		}
 
+	}
+	inputFile.close();
+	return dict;
+}
+
+// logs a message to the location described in .tyrc
+void logMessage(std::string message){
+	///open the log file
+	// get the file path from the config settings
+	std::map<std::string, std::string> config_settings = read_config();
+	std::string log_file_path = config_settings["log_path"] + "/tyr.log";
+	std::ofstream logfile;
+	logfile.open(log_file_path, std::ofstream::out | std::ofstream::app);
+
+	// write the current timestamp and the message to it
+	std::string toWrite = getCurrentTime() + ": " + message;
+	toWrite.erase(std::remove(toWrite.begin(), toWrite.end(), '\n'), toWrite.end());
+	logfile << "\n" <<toWrite;
+	// close the access to the file
+	logfile.close();
+}
+// clear the log file contents from the last run
+void clearLogFile(){
+	std::map<std::string, std::string> config_settings = read_config();
+	std::string log_file_path = config_settings["log_path"] + "/tyr.log";
+	std::ofstream logfile;
+	logfile.open(log_file_path, std::ofstream::out | std::ofstream::trunc);
+	logfile << "\n";
+	logfile.close();
+}
 // splits a string via the delimiter and returns the substrings as a vector of strings
 std::vector<std::string> splitString(std::string message_contents, char delim){
 	std::string word = ""; 
@@ -625,16 +682,20 @@ std::string parseMessage(std::string message_contents){
 void start_server(std::string ipc_path){
 	// create the zmq context
 	zmq::context_t context (1);
+	logMessage("Created zmq context.");
 	// create the socket that we will be binding
 	zmq::socket_t tyr_socket (context, ZMQ_REP);
+	logMessage("Created zmq socket");
 	// bind it to the ipc port/path that plugins will be communicating on
 	tyr_socket.bind(ipc_path);
+	logMessage("Bound socket to ipc path");
 	// begin the loop of talking to plugins
 	while (true){
 		// wait for the plugin to send info
 		zmq::message_t message;
 		tyr_socket.recv(&message);
 		std::string message_contents = std::string(static_cast<char*>(message.data()), message.size()); 
+		logMessage("Received message from plugin");
 		// parse the message data and do stuff here
 		std::string response;
 		response = parseMessage(message_contents);
@@ -642,6 +703,7 @@ void start_server(std::string ipc_path){
 		zmq::message_t reply (response.length());
 		memcpy(reply.data(), (const void*) response.c_str(), response.length());
 		tyr_socket.send(reply);
+		logMessage("Sent response to plugin");
 	}
 }
 
@@ -658,53 +720,34 @@ void curses_setup(){
 	keypad(stdscr, true);
 	getmaxyx(stdscr, screen_rows, screen_cols);
 }
-std::map<std::string, std::string> read_config(){
-	std::map<std::string, std::string> dict;
-	//TODO: error catching for when the .tyrc file doesn't exist
-	std::ifstream inputFile(".tyrc");
-	std::string line;
-	while (std::getline(inputFile, line)){
-		// check to see if the line starts with a comment, if so, we ignore it and move on
-		if (line[0] == '#' or line[0] == ' '){
-			continue;
-		}
-		else{
-			// check to make sure its not doing an empty line
-			if (line.size() != 0){	
-				// find the occurrence of the first colon:
-				int colon_index = line.find(':');
-				dict[line.substr(0,colon_index)] = line.substr(colon_index + 1);
-			}
-		}
 
-	}
-	inputFile.close();
-	return dict;
-}
 
 int main() {
 	curses_setup();
+	clearLogFile();
 	// read the config file
 	std::map<std::string,std::string> config_settings = read_config();
 	std::map<std::string,int> color_map = theme_setup(config_settings);
 	// set up the ipc path according to the config file
 	std::string ipc_path = config_settings["ipc_path"];
-	
+	logMessage("Obtained ipc plugin path");
 	
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
 	//Dialog * dia = new Dialog();
 	focused = ed;
-
+	logMessage("Created editor and fileviewer objects");
 	update_panels();
 	doupdate();
 
 	// creating a thread to house the plugin server
 	std::thread server_thread (start_server, ipc_path);
+	logMessage("Created server thread for ipc server");
 	curs_set(1);
 	mainLoop();
 	// close curses
+	logMessage("Closing tyr");
 	endwin();
 	return 0;
 }

@@ -53,12 +53,8 @@ namespace filemenu{
 			void init_color_pairs(){
 				start_color();
 
-				init_pair(borderFocusedColor, color_map["borderFocused"], -1);
-				init_pair(borderUnfocusedColor, color_map["borderUnfocused"], -1);
-				init_pair(textColor, color_map["text"], -1);
 				init_pair(directoriesColor, color_map["directories"], -1);
 				init_pair(filesColor, color_map["files"], -1);
-				init_pair(lineNumbersColor, color_map["lineNumbers"], -1);
 			}
 			void setColorMap(std::map<std::string,int> map){
 				color_map = map;
@@ -111,31 +107,25 @@ namespace filemenu{
 									}
 								}
 							}
-
-							if (currenty == current_index){
-								wattron(win,A_BOLD);
-								mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
-								wattroff(win,A_BOLD);
-							}
 							
-							else{
-								if (fsys::is_directory(menu_choices[currenty])){
-									wattron(win,A_UNDERLINE | A_DIM);
-									wattron(win, COLOR_PAIR(directoriesColor));
-									mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
-									wattroff(win, COLOR_PAIR(directoriesColor));
-									wattroff(win, A_UNDERLINE | A_DIM);
+							if (fsys::is_directory(menu_choices[currenty])){
+								wattron(win,A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor));
+								if (currenty == current_index){
+									wattron(win, A_BOLD);
 								}
-								else{
-									// items that aren't selected
-									wattron(win,A_DIM);
-									wattron(win, COLOR_PAIR(filesColor));
-									mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
-									wattroff(win, COLOR_PAIR(filesColor));
-									wattroff(win, A_DIM);
-								}
-
+								mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+								wattroff(win, A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor) | A_BOLD);
 							}
+							else{
+								// items that aren't selected
+								wattron(win,A_DIM | COLOR_PAIR(filesColor));
+								if (currenty == current_index){
+									wattron(win, A_BOLD);
+								}
+								mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+								wattroff(win, A_DIM | COLOR_PAIR(filesColor) | A_BOLD);
+							}
+
 
 						}
 					}
