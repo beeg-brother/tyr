@@ -1,3 +1,4 @@
+#include "constants.h"
 #include <curses.h>
 #include <panel.h>
 #include <iostream>
@@ -9,7 +10,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <fstream>
-
+#include <map>
 namespace fsys = std::filesystem;
 // https://solarianprogrammer.com/2019/01/13/cpp-17-filesystem-write-file-watcher-monitor/
 namespace filemenu{
@@ -30,13 +31,16 @@ namespace filemenu{
 			int scroll_start = 0;
 			// the index of the currently selected item
 			int current_index;
+
+			std::map<std::string,int> color_map;
+
 			Menu(){
 
 			}
 			Menu(WINDOW* window){
 				win = window;
 			}
-			Menu(std::vector<fsys::path> choices){
+			Menu(std::vector<fsys::path> choices ){
 				menu_choices = choices;
 				num_files = menu_choices.size();
 			}
@@ -46,6 +50,19 @@ namespace filemenu{
 				num_files = menu_choices.size();
 			}
 
+			void init_color_pairs(){
+				start_color();
+
+				init_pair(borderFocusedColor, color_map["borderFocused"], -1);
+				init_pair(borderUnfocusedColor, color_map["borderUnfocused"], -1);
+				init_pair(textColor, color_map["text"], -1);
+				init_pair(directoriesColor, color_map["directories"], -1);
+				init_pair(filesColor, color_map["files"], -1);
+				init_pair(lineNumbersColor, color_map["lineNumbers"], -1);
+			}
+			void setColorMap(std::map<std::string,int> map){
+				color_map = map;
+			}
 
 			// sets the window in which the menu will appear
 			void setWindow(WINDOW* window){
@@ -54,6 +71,7 @@ namespace filemenu{
 			}
 			// draws the menu onto the screen
 			void drawMenu(){
+				init_color_pairs();
 				werase(win);
 				num_files = menu_choices.size();
 				// check to make sure that there is a window that the menu is attached to
@@ -103,13 +121,17 @@ namespace filemenu{
 							else{
 								if (fsys::is_directory(menu_choices[currenty])){
 									wattron(win,A_UNDERLINE | A_DIM);
+									wattron(win, COLOR_PAIR(directoriesColor));
 									mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+									wattroff(win, COLOR_PAIR(directoriesColor));
 									wattroff(win, A_UNDERLINE | A_DIM);
 								}
 								else{
 									// items that aren't selected
 									wattron(win,A_DIM);
+									wattron(win, COLOR_PAIR(filesColor));
 									mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+									wattroff(win, COLOR_PAIR(filesColor));
 									wattroff(win, A_DIM);
 								}
 

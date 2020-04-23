@@ -5,6 +5,7 @@
 #include <clocale>
 #include <string>
 #include <thread>
+#include "constants.h"
 #include "filemenu.cpp"
 #include <filesystem>
 #include <vector>
@@ -36,14 +37,6 @@ struct Cursor {
 	int line_num, line_position;
 };
 
-struct Theme {
-    short borderFocused;
-    short borderUnfocused;
-    short text;
-    short directories;
-    short files;
-    short lineNumbers;
-} theme;
 
 // splits a string via the delimiter and returns the substrings as a vector of strings
 std::vector<std::string> splitString(std::string message_contents, char delim){
@@ -80,9 +73,9 @@ std::vector<std::string> splitString(std::string message_contents, char delim){
 	// return the splitted strings 
 	return substr_list; 
 }
-
-//TODO: make themes work with config files
-void theme_setup(std::map<std::string, std::string> config_settings){
+// reads the theme file specified in .tyrc and creates a color map, and also initializes the colors
+// that are used in the editor.
+std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_settings){
 	std::string theme_path = config_settings["theme_path"];
 	std::string theme_file_name = config_settings["theme"];
 	// open up the theme file
@@ -104,19 +97,14 @@ void theme_setup(std::map<std::string, std::string> config_settings){
 	}
 	inputFile.close();
 
-    init_pair(1, color_map["borderFocused"], -1);
-    theme.borderFocused = 1;
-    init_pair(2, color_map["borderUnfocused"], -1);
-    theme.borderUnfocused = 2;
-    init_pair(3, color_map["text"], -1);
-    theme.text = 3;
-    init_pair(4, color_map["directories"], -1);
-    theme.directories = 4;
-    init_pair(5, color_map["files"], -1);
-    theme.files = 5;
-    init_pair(6, color_map["lineNumbers"], -1);
-    theme.lineNumbers = 6;
-    return;
+	init_pair(borderFocusedColor, color_map["borderFocused"], -1);
+	init_pair(borderUnfocusedColor, color_map["borderUnfocused"], -1);
+	init_pair(textColor, color_map["text"], -1);
+	init_pair(directoriesColor, color_map["directories"], -1);
+	init_pair(filesColor, color_map["files"], -1);
+	init_pair(lineNumbersColor, color_map["lineNumbers"], -1);
+	
+	return color_map;
 }
 
 int screen_rows, screen_cols;
@@ -138,7 +126,7 @@ class Window {
 			width = outer_w;
 			height = outer_h;
 			border_win = newwin(outer_h, outer_w, outer_y0, outer_x0);
-			drawBorder(COLOR_PAIR(theme.borderFocused));
+			drawBorder(COLOR_PAIR(borderFocusedColor));
 			border_pan = new_panel(border_win);
 			win = newwin(inner_h, inner_w, inner_y0, inner_x0);
 			pan = new_panel(win);
@@ -147,14 +135,14 @@ class Window {
 		}
 
 		void drawBorder(int attrs){
-            wborder(border_win, (ACS_VLINE | attrs),
-                    (ACS_VLINE | attrs),
-                    (ACS_HLINE | attrs),
-                    (ACS_HLINE | attrs),
-                    (ACS_ULCORNER | attrs),
-                    (ACS_URCORNER | attrs),
-                    (ACS_LLCORNER | attrs),
-                    (ACS_LRCORNER | attrs));
+			wborder(border_win, (ACS_VLINE | attrs),
+					(ACS_VLINE | attrs),
+					(ACS_HLINE | attrs),
+					(ACS_HLINE | attrs),
+					(ACS_ULCORNER | attrs),
+					(ACS_URCORNER | attrs),
+					(ACS_LLCORNER | attrs),
+					(ACS_LRCORNER | attrs));
 		}
 };
 
@@ -210,14 +198,14 @@ class Editor : public Window{
 
 		// TODO: resizing
 		void resize(int, int){
-		    return;
+			return;
 		};
 
 		void rewrite_line_nums(){
 			// clear
 			wclear(Window::border_win);
 			// redraw border
-			drawBorder(COLOR_PAIR(theme.borderFocused));
+			drawBorder(COLOR_PAIR(borderFocusedColor));
 			// count number of digits in max line num
 			int num_rows = getmaxy(Window::win);
 			int line_num_width = 0;
@@ -232,8 +220,10 @@ class Editor : public Window{
 			for(int i = scroll_offset + 1; i <= scroll_offset + max; i++){
 				// create a right-padded string for the line number
 				std::sprintf(out, "%*d", line_num_width, i);
-				wattron(win, COLOR_PAIR(theme.lineNumbers));
+				//TODO: idk where line numbers are written but I don't think this is it
+				wattron(win, COLOR_PAIR(lineNumbersColor));
 				mvwaddstr(Window::border_win, i, 1, out);
+				wattroff(win, COLOR_PAIR(lineNumbersColor));
 			}
 			// no mem-leaks pls
 			delete out;
@@ -247,18 +237,19 @@ class Editor : public Window{
 			// TODO: this doesn't work
 			int max = std::min(window_height, static_cast<int>(strs.size()));
 			for(int i = 0; i < max; i++){
-                wattron(win, COLOR_PAIR(theme.text));
+				wattron(win, COLOR_PAIR(textColor));
 				mvwaddnstr(Window::win, i, 0, strs[i].c_str(), window_width);
+				wattroff(win, COLOR_PAIR(textColor));
 			}
 			wrefresh(win);
 		}
 
 		void onFocus(){
-		    return;
+			return;
 		}
 
 		void deFocus(){
-		    return;
+			return;
 		}
 
 		// deals with the input of characters to the editor.
@@ -382,8 +373,9 @@ class Editor : public Window{
 					// just add the character to the string
 					strs[cursor.line_num].insert(cursor.line_position, 1, (char) c);
 					const char* a = strs[cursor.line_num].data();
-                    wattron(win, COLOR_PAIR(theme.text));
-                    mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+					wattron(win, COLOR_PAIR(textColor));
+					mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+					wattroff(win, COLOR_PAIR(textColor));
 					wrefresh(Window::win);
 					cursor.screen_x += 1;
 					cursor.line_position += 1;
@@ -399,12 +391,14 @@ class Editor : public Window{
 class FileViewer : public Window{
 	protected:
 	public:
-		FileViewer(int h, int w, int y0, int x0){
+		FileViewer(int h, int w, int y0, int x0, std::map<std::string,int> color_map){
 			create_windows(h, w, y0, x0);
 			fsys::path cwd = fsys::current_path();
 			nmenu->setWindow(getWindow());
 			nmenu->setMenuItems(nmenu->getDirFiles(cwd));
+			nmenu->setColorMap(color_map);
 			nmenu->drawMenu();
+
 		}
 		Cursor cursor;
 		// my new version  of menus
@@ -412,7 +406,7 @@ class FileViewer : public Window{
 
 		// TODO: resizing
 		void resize(int, int){
-		    return;
+			return;
 		};
 
 		void create_windows(int h, int w, int y0, int x0){
@@ -423,13 +417,13 @@ class FileViewer : public Window{
 			return Window::win;
 		}
 
-        void onFocus(){
-            return;
-        }
+		void onFocus(){
+			return;
+		}
 
-        void deFocus(){
-            return;
-        }
+		void deFocus(){
+			return;
+		}
 
 		void handleInput(int c){
 			switch(c){
@@ -451,96 +445,97 @@ class FileViewer : public Window{
 
 
 class DialogElement {
-    public:
-        virtual void handleInput(int c) = 0;
-        virtual void refresh(WINDOW* win, int i) = 0;
-        
+	public:
+		virtual void handleInput(int c) = 0;
+		virtual void refresh(WINDOW* win, int i) = 0;
+		
 };
 
 class ButtonsElement : public DialogElement {
-    public:
-        void handleInput(int c){
-            return;
-        }
-        void refresh(WINDOW* win, int i){
-            return;
-        }
+	public:
+		void handleInput(int c){
+			return;
+		}
+		void refresh(WINDOW* win, int i){
+			return;
+		}
 };
 
 class StringElement : public DialogElement {
-    public:
-        const char* message;
+	public:
+		const char* message;
 
-        StringElement(const char* str){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
-            message = str;
-        }
+		StringElement(const char* str){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
+			message = str;
+		}
 
-        void handleInput(int c){
-            return;
-        }
+		void handleInput(int c){
+			return;
+		}
 
-        void refresh(WINDOW* win, int yval){
-            mvwaddstr(win, yval, 0, message);
-        }
+		void refresh(WINDOW* win, int yval){
+			mvwaddstr(win, yval, 0, message);
+		}
 };
 
 class Dialog : public Window{
-    protected:
-        std::vector<std::shared_ptr<DialogElement>> elements;
-        short currentElement;
-    public:
+	protected:
+		std::vector<std::shared_ptr<DialogElement>> elements;
+		short currentElement;
+	public:
 
-        Dialog(){
-             getmaxyx(stdscr, screen_rows, screen_cols);
-            //screen_rows = LINES;
-            //screen_cols = COLS;
-            // assuming that we want the max width to be 1/3 of the screen (idk i just picked this #)
-            int width = (screen_cols + 2)/3; // this looks jank but stack overflow says this will round the division up
-            
-            // TODO: determine the number of rows
-            int height = 5;
+		Dialog(){
+			 getmaxyx(stdscr, screen_rows, screen_cols);
+			//screen_rows = LINES;
+			//screen_cols = COLS;
+			// assuming that we want the max width to be 1/3 of the screen (idk i just picked this #)
+			int width = (screen_cols + 2)/3; // this looks jank but stack overflow says this will round the division up
+			
+			// TODO: determine the number of rows
+			int height = 5;
 
-            // center dialog box
-            int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
-            int start_y = (screen_rows + 1)/2 - (height + 1)/2;
-            // offsets to account for the border
-            Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
-            elements.push_back(std::make_shared<StringElement>("testing"));
-            refresh();
-            wrefresh(Window::win);
-        }
+			// center dialog box
+			int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
+			int start_y = (screen_rows + 1)/2 - (height + 1)/2;
+			// offsets to account for the border
+			Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
+			elements.push_back(std::make_shared<StringElement>("testing"));
+			refresh();
+			wrefresh(Window::win);
+		}
 
-        void refresh(){
-            for(int i = 0; i < elements.size(); i++){
-                wattron(win, COLOR_PAIR(theme.text));
-                elements[i]->refresh(Window::win, i);
-            }
-            wrefresh(Window::win);
-        }
+		void refresh(){
+			for(int i = 0; i < elements.size(); i++){
+				wattron(win, COLOR_PAIR(textColor));
+				elements[i]->refresh(Window::win, i);
+				wattroff(win, COLOR_PAIR(textColor));
+			}
+			wrefresh(Window::win);
+		}
 
-        void handleInput(int c){
-            switch(c){
-                case(KEY_STAB) : {
-                    currentElement = (currentElement + 1) % elements.size();
-                }
-                case(KEY_BTAB) : {
-                    currentElement = (currentElement - 1 + elements.size()) % elements.size();
-                }
-            };
-        }
+		void handleInput(int c){
+			switch(c){
+				case(KEY_STAB) : {
+					currentElement = (currentElement + 1) % elements.size();
+				}
+				case(KEY_BTAB) : {
+					currentElement = (currentElement - 1 + elements.size()) % elements.size();
+				}
+			};
+		}
 
-    // TODO: these
-    void resize(int, int){
-        return;
-    }
+	// TODO: these
+	void resize(int, int){
+		return;
+	}
 
-    void onFocus(){
-        return;
-    }
+	void onFocus(){
+		return;
+	}
 
-    void deFocus(){
-        return;
-    }
+	void deFocus(){
+		return;
+	}
 };
 
 Editor *ed;
@@ -651,17 +646,17 @@ void start_server(std::string ipc_path){
 }
 
 void curses_setup(){
-    // initialize curses
-    initscr();
-    // start color system
-    start_color();
-    use_default_colors();
-    // refresh screen
-    refresh();
-    cbreak();
-    noecho();
-    keypad(stdscr, true);
-    getmaxyx(stdscr, screen_rows, screen_cols);
+	// initialize curses
+	initscr();
+	// start color system
+	start_color();
+	use_default_colors();
+	// refresh screen
+	refresh();
+	cbreak();
+	noecho();
+	keypad(stdscr, true);
+	getmaxyx(stdscr, screen_rows, screen_cols);
 }
 std::map<std::string, std::string> read_config(){
 	std::map<std::string, std::string> dict;
@@ -688,17 +683,17 @@ std::map<std::string, std::string> read_config(){
 }
 
 int main() {
-    curses_setup();
-    // read the config file
-    std::map<std::string,std::string> config_settings = read_config();
-    theme_setup(config_settings);
-    // set up the ipc path according to the config file
+	curses_setup();
+	// read the config file
+	std::map<std::string,std::string> config_settings = read_config();
+	std::map<std::string,int> color_map = theme_setup(config_settings);
+	// set up the ipc path according to the config file
 	std::string ipc_path = config_settings["ipc_path"];
 	
 	
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
-	fs = new FileViewer(screen_rows, 21, 0, 0);
+	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
 	//Dialog * dia = new Dialog();
 	focused = ed;
 
