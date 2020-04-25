@@ -55,6 +55,7 @@ namespace filemenu{
 
 				init_pair(directoriesColor, color_map["directories"], -1);
 				init_pair(filesColor, color_map["files"], -1);
+				init_pair(selectedMenuItemColor,color_map["selectedItem"], -1);
 			}
 			void setColorMap(std::map<std::string,int> map){
 				color_map = map;
@@ -111,7 +112,7 @@ namespace filemenu{
 							if (fsys::is_directory(menu_choices[currenty])){
 								wattron(win,A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor));
 								if (currenty == current_index){
-									wattron(win, A_BOLD);
+									wattron(win, A_BOLD| COLOR_PAIR(selectedMenuItemColor));
 								}
 								mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 								wattroff(win, A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor) | A_BOLD);
@@ -120,7 +121,7 @@ namespace filemenu{
 								// items that aren't selected
 								wattron(win,A_DIM | COLOR_PAIR(filesColor));
 								if (currenty == current_index){
-									wattron(win, A_BOLD);
+									wattron(win, A_BOLD | COLOR_PAIR(selectedMenuItemColor));
 								}
 								mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
 								wattroff(win, A_DIM | COLOR_PAIR(filesColor) | A_BOLD);

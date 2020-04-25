@@ -160,6 +160,7 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
 	init_pair(directoriesColor, color_map["directories"], -1);
 	init_pair(filesColor, color_map["files"], -1);
 	init_pair(lineNumbersColor, color_map["lineNumbers"], -1);
+    init_pair(selectedMenuItemColor,color_map["selectedItem"], -1);
 	
 	return color_map;
 }
@@ -738,7 +739,7 @@ int main() {
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
 	//Dialog * dia = new Dialog();
-	focused = ed;
+	focused = fs;
 	logMessage("Created editor and fileviewer objects");
 	update_panels();
 	doupdate();

@@ -7,6 +7,7 @@ const short textColor = 3;
 const short directoriesColor = 4;
 const short filesColor = 5;
 const short lineNumbersColor = 6;
+const short selectedMenuItemColor = 7;
 
 
 #endif
