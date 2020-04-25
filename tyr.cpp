@@ -423,7 +423,9 @@ class Editor : public Window{
 						cursor.line_position -= 1;
 						// clear the line, then redraw it to update all characters
 						mvwaddstr(win, cursor.screen_y, 0, std::string(window_width, ' ').data());
+						wattron(win, COLOR_PAIR(textColor));
 						mvwaddnstr(win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+                        wattroff(win, COLOR_PAIR(textColor));
 					}
 					break;
 				default:
