@@ -355,24 +355,102 @@ class FileViewer : public Window{
 		}
 };
 
-
+// TODO: make only some kinds of DialogElements focusable
 class DialogElement {
     public:
         virtual void handleInput(int c) = 0;
         virtual void refresh(WINDOW* win, int i) = 0;
-        
+        virtual void onFocus() = 0;
+        virtual void deFocus() = 0;
 };
 
+// used to provide button options to the user
+// selecting a button can close the dialog if the exitOnSelect flag is true
+// otherwise, selected button(s) have a distinct highlight
 class ButtonsElement : public DialogElement {
     public:
-        void handleInput(int c){
+        std::vector<std::string> options;
+        std::vector<std::string>::iterator selected;
+        short numOptions;
+        bool eos;
+        short intendedYLevel = 3;
+
+        ButtonsElement(std::vector<std::string> opts, bool exitOnSelect){
+            options = opts;
+            numOptions = opts.size();
+            eos = exitOnSelect;
+            selected = options.begin();
+        }
+
+        void onFocus(){
+            curs_set(0);
             return;
         }
+
+        void deFocus(){
+            curs_set(1);
+            return;
+        }
+
+        void handleInput(int c){
+            // TODO: rewrite this to use iterator
+            switch(c){
+                case KEY_RIGHT:
+                    if (selected == options.end()){
+                        selected = options.begin();
+                    } else {
+                        selected += 1;
+                    }
+                    break;
+                case KEY_LEFT:
+                    if (selected == options.begin()){
+                        selected = options.end();
+                    } else {
+                        selected -= 1;
+                    }
+                    break;
+                case KEY_ENTER:
+                    if(eos){
+                        // TODO: returning values to where they should go
+                        return;
+                    }
+                    else {
+                        return;
+                    }
+            }
+            return;
+        }
+
+        void draw_box(WINDOW* win, int y1, int x1, int y2, int x2){
+            int h = y2 - y1;
+            int w = x2 - x1;
+            wmove(win, y1, x1);
+            wvline(win, ACS_VLINE, h);
+            waddch(win, ACS_ULCORNER);
+            whline(win, ACS_HLINE, w - 1);
+            wmove(win, y1, x2);
+            wvline(win, ACS_VLINE, h);
+            waddch(win, ACS_URCORNER);
+            wmove(win, y2, x1);
+            whline(win, ACS_HLINE, w);
+            waddch(win, ACS_LLCORNER);
+            wmove(win, y2, x2);
+            waddch(win, ACS_LRCORNER);
+        }
+
         void refresh(WINDOW* win, int i){
+            // TOOD: center buttons
+            int currentX = 0;
+            for(std::string s: options){
+                draw_box(win, intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
+                mvwaddstr(win, intendedYLevel, currentX + 1, s.data());
+                currentX += s.size() + 2;
+            }
             return;
         }
 };
 
+// used to display a string to the user
 class StringElement : public DialogElement {
     public:
         const char* message;
@@ -380,8 +458,23 @@ class StringElement : public DialogElement {
         StringElement(const char* str){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
             message = str;
         }
+        ~StringElement(){
+            delete message;
+        }
+
+        void onFocus(){
+            curs_set(0);
+            return;
+        }
+
+        void deFocus(){
+            curs_set(1);
+            return;
+        }
+
 
         void handleInput(int c){
+            // do nothing
             return;
         }
 
@@ -404,14 +497,15 @@ class Dialog : public Window{
             int width = (screen_cols + 2)/3; // this looks jank but stack overflow says this will round the division up
             
             // TODO: determine the number of rows
-            int height = 5;
+            int height = 10;
 
             // center dialog box
             int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
             int start_y = (screen_rows + 1)/2 - (height + 1)/2;
             // offsets to account for the border
             Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
-            elements.push_back(std::make_shared<StringElement>("testing"));
+            std::vector<std::string> test {"tetsing", "test"};
+            elements.push_back(std::make_shared<ButtonsElement>(test, false));
             refresh();
             wrefresh(Window::win);
         }
@@ -610,7 +704,7 @@ int main() {
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0);
 	Dialog * dia = new Dialog();
-	focused = ed;
+	focused = dia;
 
 	update_panels();
 	doupdate();
