@@ -2,15 +2,19 @@
 #include <curses.h>
 #include <panel.h>
 #include <iostream>
+#include <fstream>
 #include <clocale>
 #include <string>
 #include <thread>
+#include "constants.h"
 #include "filemenu.cpp"
 #include <filesystem>
 #include <vector>
 #include <assert.h>
 #include <fstream>
 #include <zmq.hpp>
+#include <map>
+#include <chrono>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -34,10 +38,132 @@ struct Cursor {
 	// line_position means the position of the cursor in this line (x-value ish)
 	int line_num, line_position;
 };
+// gets the current time as a string timestamp
+std::string getCurrentTime(){
+	time_t _tm =time(NULL );
+	struct tm * curtime = localtime ( &_tm );
+	std::string time = asctime(curtime);
+	return time;
+}
 
-struct Theme {
+std::map<std::string, std::string> read_config(){
+	std::map<std::string, std::string> dict;
+	//TODO: error catching for when the .tyrc file doesn't exist
+	std::ifstream inputFile(".tyrc");
+	std::string line;
+	while (std::getline(inputFile, line)){
+		// check to see if the line starts with a comment, if so, we ignore it and move on
+		if (line[0] == '#' or line[0] == ' '){
+			continue;
+		}
+		else{
+			// check to make sure its not doing an empty line
+			if (line.size() != 0){	
+				// find the occurrence of the first colon:
+				int colon_index = line.find(':');
+				dict[line.substr(0,colon_index)] = line.substr(colon_index + 1);
+			}
+		}
 
-};
+	}
+	inputFile.close();
+	return dict;
+}
+
+// logs a message to the location described in .tyrc
+void logMessage(std::string message){
+	///open the log file
+	// get the file path from the config settings
+	std::map<std::string, std::string> config_settings = read_config();
+	std::string log_file_path = config_settings["log_path"] + "/tyr.log";
+	std::ofstream logfile;
+	logfile.open(log_file_path, std::ofstream::out | std::ofstream::app);
+
+	// write the current timestamp and the message to it
+	std::string toWrite = getCurrentTime() + ": " + message;
+	toWrite.erase(std::remove(toWrite.begin(), toWrite.end(), '\n'), toWrite.end());
+	logfile << "\n" <<toWrite;
+	// close the access to the file
+	logfile.close();
+}
+// clear the log file contents from the last run
+void clearLogFile(){
+	std::map<std::string, std::string> config_settings = read_config();
+	std::string log_file_path = config_settings["log_path"] + "/tyr.log";
+	std::ofstream logfile;
+	logfile.open(log_file_path, std::ofstream::out | std::ofstream::trunc);
+	logfile << "\n";
+	logfile.close();
+}
+// splits a string via the delimiter and returns the substrings as a vector of strings
+std::vector<std::string> splitString(std::string message_contents, char delim){
+	std::string word = ""; 
+	// to count the number of split strings 
+	int num = 0; 
+	// adding delimiter character at the end 
+	// of 'str' 
+	message_contents = message_contents + delim; 
+  
+	// length of 'str' 
+	int l = message_contents.size(); 
+  
+	// traversing 'str' from left to right 
+	std::vector<std::string> substr_list; 
+	for (int i = 0; i < l; i++) { 
+  
+		// if str[i] is not equal to the delimiter 
+		// character then accumulate it to 'word' 
+		if (message_contents[i] != delim) 
+			word = word + message_contents[i]; 
+  
+		else { 
+  
+			// if 'word' is not an empty string, 
+			// then add this 'word' to the array 
+			// 'substr_list[]' 
+			if ((int)word.size() != 0) 
+				substr_list.push_back(word);
+			// reset 'word' 
+			word = ""; 
+		} 
+	} 
+	// return the splitted strings 
+	return substr_list; 
+}
+// reads the theme file specified in .tyrc and creates a color map, and also initializes the colors
+// that are used in the editor.
+std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_settings){
+	std::string theme_path = config_settings["theme_path"];
+	std::string theme_file_name = config_settings["theme"];
+	// open up the theme file
+	//TODO: check for the existence of the theme file
+	std::ifstream inputFile(theme_path + "/" + theme_file_name);
+	std::string line;
+	std::vector<std::vector<int>> color_vec;
+	std::map<std::string,int> color_map;
+	// read through the theme file
+	while (std::getline(inputFile, line)){
+		// ignore commented lines
+		if (line[0] != '#'){
+			// ignore empty lines
+			if (line.size() != 0){
+				int colon_index = line.find(':');
+				color_map[line.substr(0,colon_index)] = stoi(line.substr(colon_index + 1));
+			}
+		}
+	}
+	inputFile.close();
+
+	init_pair(borderFocusedColor, color_map["borderFocused"], -1);
+	init_pair(borderUnfocusedColor, color_map["borderUnfocused"], -1);
+	init_pair(textColor, color_map["text"], -1);
+	init_pair(directoriesColor, color_map["directories"], -1);
+	init_pair(filesColor, color_map["files"], -1);
+	init_pair(lineNumbersColor, color_map["lineNumbers"], -1);
+    init_pair(selectedMenuItemColor,color_map["selectedItem"], -1);
+	
+	return color_map;
+}
 
 int screen_rows, screen_cols;
 
@@ -58,12 +184,23 @@ class Window {
 			width = outer_w;
 			height = outer_h;
 			border_win = newwin(outer_h, outer_w, outer_y0, outer_x0);
-			wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+			drawBorder(COLOR_PAIR(borderFocusedColor));
 			border_pan = new_panel(border_win);
 			win = newwin(inner_h, inner_w, inner_y0, inner_x0);
 			pan = new_panel(win);
 			wrefresh(border_win);
 			wrefresh(win);
+		}
+
+		void drawBorder(int attrs){
+			wborder(border_win, (ACS_VLINE | attrs),
+					(ACS_VLINE | attrs),
+					(ACS_HLINE | attrs),
+					(ACS_HLINE | attrs),
+					(ACS_ULCORNER | attrs),
+					(ACS_URCORNER | attrs),
+					(ACS_LLCORNER | attrs),
+					(ACS_LRCORNER | attrs));
 		}
 };
 
@@ -119,14 +256,14 @@ class Editor : public Window{
 
 		// TODO: resizing
 		void resize(int, int){
-		    return;
+			return;
 		};
 
 		void rewrite_line_nums(){
 			// clear
 			wclear(Window::border_win);
 			// redraw border
-			wborder(border_win, 0, 0, 0, 0, 0, 0, 0, 0);
+			drawBorder(COLOR_PAIR(borderFocusedColor));
 			// count number of digits in max line num
 			int num_rows = getmaxy(Window::win);
 			int line_num_width = 0;
@@ -141,7 +278,10 @@ class Editor : public Window{
 			for(int i = scroll_offset + 1; i <= scroll_offset + max; i++){
 				// create a right-padded string for the line number
 				std::sprintf(out, "%*d", line_num_width, i);
+				//TODO: idk where line numbers are written but I don't think this is it
+				wattron(win, COLOR_PAIR(lineNumbersColor));
 				mvwaddstr(Window::border_win, i, 1, out);
+				wattroff(win, COLOR_PAIR(lineNumbersColor));
 			}
 			// no mem-leaks pls
 			delete out;
@@ -155,17 +295,19 @@ class Editor : public Window{
 			// TODO: this doesn't work
 			int max = std::min(window_height, static_cast<int>(strs.size()));
 			for(int i = 0; i < max; i++){
+				wattron(win, COLOR_PAIR(textColor));
 				mvwaddnstr(Window::win, i, 0, strs[i].c_str(), window_width);
+				wattroff(win, COLOR_PAIR(textColor));
 			}
 			wrefresh(win);
 		}
 
 		void onFocus(){
-		    return;
+			return;
 		}
 
 		void deFocus(){
-		    return;
+			return;
 		}
 
 		// deals with the input of characters to the editor.
@@ -262,7 +404,7 @@ class Editor : public Window{
 					rewrite();
 
 					break;
-				case 127: // BACKSPACE KEY
+				case KEY_BACKSPACE: // BACKSPACE KEY
 					if(cursor.line_position == 0){
 						// if at the start of a line, we have to combine two lines
 						// if at (0, 0), do nothing
@@ -282,14 +424,18 @@ class Editor : public Window{
 						cursor.line_position -= 1;
 						// clear the line, then redraw it to update all characters
 						mvwaddstr(win, cursor.screen_y, 0, std::string(window_width, ' ').data());
+						wattron(win, COLOR_PAIR(textColor));
 						mvwaddnstr(win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+                        wattroff(win, COLOR_PAIR(textColor));
 					}
 					break;
 				default:
 					// just add the character to the string
 					strs[cursor.line_num].insert(cursor.line_position, 1, (char) c);
 					const char* a = strs[cursor.line_num].data();
+					wattron(win, COLOR_PAIR(textColor));
 					mvwaddnstr(Window::win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+					wattroff(win, COLOR_PAIR(textColor));
 					wrefresh(Window::win);
 					cursor.screen_x += 1;
 					cursor.line_position += 1;
@@ -305,12 +451,14 @@ class Editor : public Window{
 class FileViewer : public Window{
 	protected:
 	public:
-		FileViewer(int h, int w, int y0, int x0){
+		FileViewer(int h, int w, int y0, int x0, std::map<std::string,int> color_map){
 			create_windows(h, w, y0, x0);
 			fsys::path cwd = fsys::current_path();
 			nmenu->setWindow(getWindow());
 			nmenu->setMenuItems(nmenu->getDirFiles(cwd));
+			nmenu->setColorMap(color_map);
 			nmenu->drawMenu();
+
 		}
 		Cursor cursor;
 		// my new version  of menus
@@ -318,7 +466,7 @@ class FileViewer : public Window{
 
 		// TODO: resizing
 		void resize(int, int){
-		    return;
+			return;
 		};
 
 		void create_windows(int h, int w, int y0, int x0){
@@ -329,13 +477,13 @@ class FileViewer : public Window{
 			return Window::win;
 		}
 
-        void onFocus(){
-            return;
-        }
+		void onFocus(){
+			return;
+		}
 
-        void deFocus(){
-            return;
-        }
+		void deFocus(){
+			return;
+		}
 
 		void handleInput(int c){
 			switch(c){
@@ -452,8 +600,8 @@ class ButtonsElement : public DialogElement {
 
 // used to display a string to the user
 class StringElement : public DialogElement {
-    public:
-        const char* message;
+	public:
+		const char* message;
 
         StringElement(const char* str){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
             message = str;
@@ -478,16 +626,16 @@ class StringElement : public DialogElement {
             return;
         }
 
-        void refresh(WINDOW* win, int yval){
-            mvwaddstr(win, yval, 0, message);
-        }
+		void refresh(WINDOW* win, int yval){
+			mvwaddstr(win, yval, 0, message);
+		}
 };
 
 class Dialog : public Window{
-    protected:
-        std::vector<std::shared_ptr<DialogElement>> elements;
-        short currentElement;
-    public:
+	protected:
+		std::vector<std::shared_ptr<DialogElement>> elements;
+		short currentElement;
+	public:
 
         Dialog(){
              getmaxyx(stdscr, screen_rows, screen_cols);
@@ -510,36 +658,38 @@ class Dialog : public Window{
             wrefresh(Window::win);
         }
 
-        void refresh(){
-            for(int i = 0; i < elements.size(); i++){
-                elements[i]->refresh(Window::win, i);
-            }
-            wrefresh(Window::win);
-        }
+		void refresh(){
+			for(int i = 0; i < elements.size(); i++){
+				wattron(win, COLOR_PAIR(textColor));
+				elements[i]->refresh(Window::win, i);
+				wattroff(win, COLOR_PAIR(textColor));
+			}
+			wrefresh(Window::win);
+		}
 
-        void handleInput(int c){
-            switch(c){
-                case(KEY_STAB) : {
-                    currentElement = (currentElement + 1) % elements.size();
-                }
-                case(KEY_BTAB) : {
-                    currentElement = (currentElement - 1 + elements.size()) % elements.size();
-                }
-            };
-        }
+		void handleInput(int c){
+			switch(c){
+				case(KEY_STAB) : {
+					currentElement = (currentElement + 1) % elements.size();
+				}
+				case(KEY_BTAB) : {
+					currentElement = (currentElement - 1 + elements.size()) % elements.size();
+				}
+			};
+		}
 
-    // TODO: these
-    void resize(int, int){
-        return;
-    }
+	// TODO: these
+	void resize(int, int){
+		return;
+	}
 
-    void onFocus(){
-        return;
-    }
+	void onFocus(){
+		return;
+	}
 
-    void deFocus(){
-        return;
-    }
+	void deFocus(){
+		return;
+	}
 };
 
 Editor *ed;
@@ -551,44 +701,15 @@ void mainLoop(){
 	int c;
 	while(1){
 		c = getch();
+//		switch(c){
+//		    case (KEY_ATAB & 037):
+//		        focused->deFocus();
+//
+//		}
 		focused->handleInput(c);
 	};
 }
-// splits a string via the delimiter and returns the substrings as a vector of strings
-std::vector<std::string> splitString(std::string message_contents, char delim){
-	std::string word = ""; 
-	// to count the number of split strings 
-	int num = 0; 
-	// adding delimiter character at the end 
-	// of 'str' 
-	message_contents = message_contents + delim; 
-  
-	// length of 'str' 
-	int l = message_contents.size(); 
-  
-	// traversing 'str' from left to right 
-	std::vector<std::string> substr_list; 
-	for (int i = 0; i < l; i++) { 
-  
-		// if str[i] is not equal to the delimiter 
-		// character then accumulate it to 'word' 
-		if (message_contents[i] != delim) 
-			word = word + message_contents[i]; 
-  
-		else { 
-  
-			// if 'word' is not an empty string, 
-			// then add this 'word' to the array 
-			// 'substr_list[]' 
-			if ((int)word.size() != 0) 
-				substr_list.push_back(word);
-			// reset 'word' 
-			word = ""; 
-		} 
-	} 
-	// return the splitted strings 
-	return substr_list; 
-}
+
 // takes in a command string from a plugin and returns the message that tyr will send back
 // it also changes anything that needs to be changed according to the plugin's message
 //TODO: get evan to write the parts involving the editor
@@ -658,16 +779,20 @@ std::string parseMessage(std::string message_contents){
 void start_server(std::string ipc_path){
 	// create the zmq context
 	zmq::context_t context (1);
+	logMessage("Created zmq context.");
 	// create the socket that we will be binding
 	zmq::socket_t tyr_socket (context, ZMQ_REP);
+	logMessage("Created zmq socket");
 	// bind it to the ipc port/path that plugins will be communicating on
 	tyr_socket.bind(ipc_path);
+	logMessage("Bound socket to ipc path");
 	// begin the loop of talking to plugins
 	while (true){
 		// wait for the plugin to send info
 		zmq::message_t message;
 		tyr_socket.recv(&message);
 		std::string message_contents = std::string(static_cast<char*>(message.data()), message.size()); 
+		logMessage("Received message from plugin");
 		// parse the message data and do stuff here
 		std::string response;
 		response = parseMessage(message_contents);
@@ -675,45 +800,51 @@ void start_server(std::string ipc_path){
 		zmq::message_t reply (response.length());
 		memcpy(reply.data(), (const void*) response.c_str(), response.length());
 		tyr_socket.send(reply);
+		logMessage("Sent response to plugin");
 	}
 }
 
 void curses_setup(){
-    // initialize curses
-    initscr();
-    // start color system
-    start_color();
-    // refresh screen
-    refresh();
-    cbreak();
-    noecho();
-    keypad(stdscr, true);
-    getmaxyx(stdscr, screen_rows, screen_cols);
-
+	// initialize curses
+	initscr();
+	// start color system
+	start_color();
+	use_default_colors();
+	// refresh screen
+	refresh();
+	cbreak();
+	noecho();
+	keypad(stdscr, true);
+	getmaxyx(stdscr, screen_rows, screen_cols);
 }
 
+
 int main() {
-    curses_setup();
-
-	//TODO: read this from a config file
-	std::string ipc_path = "ipc:///tmp/tyrplugins.ipc";
-
-	//TODO: read theme from .tyrc and /themes folder
-
+	curses_setup();
+	clearLogFile();
+	// read the config file
+	std::map<std::string,std::string> config_settings = read_config();
+	std::map<std::string,int> color_map = theme_setup(config_settings);
+	// set up the ipc path according to the config file
+	std::string ipc_path = config_settings["ipc_path"];
+	logMessage("Obtained ipc plugin path");
+	
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
-	fs = new FileViewer(screen_rows, 21, 0, 0);
-	Dialog * dia = new Dialog();
-	focused = dia;
-
+	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
+	//Dialog * dia = new Dialog();
+	focused = fs;
+	logMessage("Created editor and fileviewer objects");
 	update_panels();
 	doupdate();
 
 	// creating a thread to house the plugin server
 	std::thread server_thread (start_server, ipc_path);
+	logMessage("Created server thread for ipc server");
 	curs_set(1);
 	mainLoop();
 	// close curses
+	logMessage("Closing tyr");
 	endwin();
 	return 0;
 }
