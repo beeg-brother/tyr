@@ -541,20 +541,20 @@ class ButtonsElement : public DialogElement {
         }
 
         void handleInput(int c){
-            // TODO: rewrite this to use iterator
+            logMessage("ButtonDialog received input: " + std::to_string(c));
             switch(c){
                 case KEY_RIGHT:
                     if (selected == options.end()){
                         selected = options.begin();
                     } else {
-                        selected += 1;
+                        selected++;
                     }
                     break;
                 case KEY_LEFT:
                     if (selected == options.begin()){
                         selected = options.end();
                     } else {
-                        selected -= 1;
+                        selected--;
                     }
                     break;
                 case KEY_ENTER:
@@ -569,28 +569,32 @@ class ButtonsElement : public DialogElement {
             return;
         }
 
-        void draw_box(WINDOW* win, int y1, int x1, int y2, int x2){
+        void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2){
             int h = y2 - y1;
             int w = x2 - x1;
             wmove(win, y1, x1);
-            wvline(win, ACS_VLINE, h);
-            waddch(win, ACS_ULCORNER);
-            whline(win, ACS_HLINE, w - 1);
+            wvline(win, ACS_VLINE | attrs, h);
+            waddch(win, ACS_ULCORNER | attrs);
+            whline(win, ACS_HLINE | attrs, w - 1);
             wmove(win, y1, x2);
-            wvline(win, ACS_VLINE, h);
-            waddch(win, ACS_URCORNER);
+            wvline(win, ACS_VLINE | attrs, h);
+            waddch(win, ACS_URCORNER | attrs);
             wmove(win, y2, x1);
-            whline(win, ACS_HLINE, w);
-            waddch(win, ACS_LLCORNER);
+            whline(win, ACS_HLINE | attrs, w);
+            waddch(win, ACS_LLCORNER | attrs);
             wmove(win, y2, x2);
-            waddch(win, ACS_LRCORNER);
+            waddch(win, ACS_LRCORNER | attrs);
         }
 
         void refresh(WINDOW* win, int i){
             // TOOD: center buttons
             int currentX = 0;
             for(std::string s: options){
-                draw_box(win, intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
+                if (s == *selected){
+                    draw_box(win, COLOR_PAIR(borderFocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
+                } else {
+                    draw_box(win, COLOR_PAIR(borderUnfocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
+                }
                 mvwaddstr(win, intendedYLevel, currentX + 1, s.data());
                 currentX += s.size() + 2;
             }
@@ -634,7 +638,7 @@ class StringElement : public DialogElement {
 class Dialog : public Window{
 	protected:
 		std::vector<std::shared_ptr<DialogElement>> elements;
-		short currentElement;
+    short currentElement;
 	public:
 
         Dialog(){
@@ -652,8 +656,11 @@ class Dialog : public Window{
             int start_y = (screen_rows + 1)/2 - (height + 1)/2;
             // offsets to account for the border
             Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
+            currentElement = 0;
+
             std::vector<std::string> test {"tetsing", "test"};
             elements.push_back(std::make_shared<ButtonsElement>(test, false));
+
             refresh();
             wrefresh(Window::win);
         }
@@ -669,12 +676,15 @@ class Dialog : public Window{
 
 		void handleInput(int c){
 			switch(c){
-				case(KEY_STAB) : {
-					currentElement = (currentElement + 1) % elements.size();
-				}
-				case(KEY_BTAB) : {
+				case(KEY_STAB) :
+					currentElement += (currentElement + 1 + elements.size()) % elements.size();
+				    break;
+				case(KEY_BTAB) :
 					currentElement = (currentElement - 1 + elements.size()) % elements.size();
-				}
+				    break;
+				default:
+				    elements[currentElement]->handleInput(c);
+				    break;
 			};
 		}
 
@@ -832,8 +842,8 @@ int main() {
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
-	//Dialog * dia = new Dialog();
-	focused = fs;
+	Dialog * dia = new Dialog();
+	focused = dia;
 	logMessage("Created editor and fileviewer objects");
 	update_panels();
 	doupdate();
