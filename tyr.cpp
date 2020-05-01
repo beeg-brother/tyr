@@ -521,6 +521,8 @@ class ButtonsElement : public DialogElement {
         std::vector<std::string>::iterator selected;
         short numOptions;
         bool eos;
+        bool isFocused = false;
+        // TODO: this
         short intendedYLevel = 3;
 
         ButtonsElement(std::vector<std::string> opts, bool exitOnSelect){
@@ -531,11 +533,13 @@ class ButtonsElement : public DialogElement {
         }
 
         void onFocus(){
+            isFocused = true;
             curs_set(0);
             return;
         }
 
         void deFocus(){
+            isFocused = false;
             curs_set(1);
             return;
         }
@@ -642,7 +646,8 @@ class StringElement : public DialogElement {
 class Dialog : public Window{
 	protected:
 		std::vector<std::shared_ptr<DialogElement>> elements;
-    short currentElement;
+        short currentElement;
+
 	public:
 
         Dialog(){
@@ -663,7 +668,11 @@ class Dialog : public Window{
             currentElement = 0;
 
             std::vector<std::string> test {"tetsing", "test"};
+            std::vector<std::string> test2 {"tetsing2", "test2"};
             elements.push_back(std::make_shared<ButtonsElement>(test, false));
+            elements.push_back(std::make_shared<ButtonsElement>(test2, false));
+            elements.push_back(std::make_shared<StringElement>("string test"));
+            elements[0]->onFocus();
 
             refresh();
             wrefresh(Window::win);
