@@ -544,15 +544,16 @@ class ButtonsElement : public DialogElement {
             logMessage("ButtonDialog received input: " + std::to_string(c));
             switch(c){
                 case KEY_RIGHT:
+                    logMessage(*selected);
+                    selected++;
                     if (selected == options.end()){
                         selected = options.begin();
-                    } else {
-                        selected++;
                     }
                     break;
                 case KEY_LEFT:
+                    logMessage("left");
                     if (selected == options.begin()){
-                        selected = options.end();
+                        selected = options.end() - 1;
                     } else {
                         selected--;
                     }
@@ -565,6 +566,9 @@ class ButtonsElement : public DialogElement {
                     else {
                         return;
                     }
+                    break;
+                default:
+                    break;
             }
             return;
         }
@@ -686,6 +690,7 @@ class Dialog : public Window{
 				    elements[currentElement]->handleInput(c);
 				    break;
 			};
+			refresh();
 		}
 
 	// TODO: these
