@@ -507,9 +507,10 @@ class FileViewer : public Window{
 class DialogElement {
     public:
         virtual void handleInput(int c) = 0;
-        virtual void refresh(WINDOW* win, int i) = 0;
+        virtual void refresh(WINDOW* win, int startY) = 0;
         virtual void onFocus() = 0;
         virtual void deFocus() = 0;
+        virtual int requestNumLines(int width) = 0;
 };
 
 // used to provide button options to the user
@@ -542,6 +543,11 @@ class ButtonsElement : public DialogElement {
             isFocused = false;
             curs_set(1);
             return;
+        }
+
+        int requestNumLines(int width){
+            // TODO: make this accurate
+            return 3;
         }
 
         void handleInput(int c){
@@ -594,7 +600,7 @@ class ButtonsElement : public DialogElement {
             waddch(win, ACS_LRCORNER | attrs);
         }
 
-        void refresh(WINDOW* win, int i){
+        void refresh(WINDOW* win, int startY){
             // TOOD: center buttons
             int currentX = 0;
             for(std::string s: options){
@@ -614,9 +620,11 @@ class ButtonsElement : public DialogElement {
 class StringElement : public DialogElement {
 	public:
 		const char* message;
+		int length;
 
-        StringElement(const char* str){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
+        StringElement(const char* str, int len){ // see https://www.oreilly.com/library/view/optimized-c/9781491922057/ch04.html for argument
             message = str;
+            length = len;
         }
         ~StringElement(){
             delete message;
@@ -632,6 +640,10 @@ class StringElement : public DialogElement {
             return;
         }
 
+        int requestNumLines(int width){
+            // round up division. this prolly sucks tbh
+            return length / width + (length % width != 0);
+        }
 
         void handleInput(int c){
             // do nothing
@@ -650,28 +662,28 @@ class Dialog : public Window{
 
 	public:
 
-        Dialog(){
+        Dialog(std::vector<std::shared_ptr<DialogElement>> els){
              getmaxyx(stdscr, screen_rows, screen_cols);
-            //screen_rows = LINES;
-            //screen_cols = COLS;
+
             // assuming that we want the max width to be 1/3 of the screen (idk i just picked this #)
             int width = (screen_cols + 2)/3; // this looks jank but stack overflow says this will round the division up
-            
-            // TODO: determine the number of rows
-            int height = 10;
+
+            elements = els;
+
+            int lines = 0;
+            for(std::vector<std::shared_ptr<DialogElement>>::iterator it = elements.begin(); it != elements.end(); it++){
+                lines += (*it)->requestNumLines(width);
+            }
+            height = lines;
 
             // center dialog box
             int start_x = (screen_cols + 1)/2 - (width + 1)/2; // again, rounding up the division
             int start_y = (screen_rows + 1)/2 - (height + 1)/2;
+
             // offsets to account for the border
             Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
             currentElement = 0;
 
-            std::vector<std::string> test {"tetsing", "test"};
-            std::vector<std::string> test2 {"tetsing2", "test2"};
-            elements.push_back(std::make_shared<ButtonsElement>(test, false));
-            elements.push_back(std::make_shared<ButtonsElement>(test2, false));
-            elements.push_back(std::make_shared<StringElement>("string test"));
             elements[0]->onFocus();
 
             refresh();
@@ -679,9 +691,11 @@ class Dialog : public Window{
         }
 
 		void refresh(){
+            int currY = 0;
 			for(int i = 0; i < elements.size(); i++){
 				wattron(win, COLOR_PAIR(textColor));
-				elements[i]->refresh(Window::win, i);
+				elements[i]->refresh(Window::win, currY);
+				currY += elements[i]->requestNumLines(width);
 				wattroff(win, COLOR_PAIR(textColor));
 			}
 			wrefresh(Window::win);
@@ -856,7 +870,18 @@ int main() {
 	// creates the editor screen
 	ed = new Editor(screen_rows, screen_cols-20, 0, 20);
 	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
-	Dialog * dia = new Dialog();
+
+	std::vector<std::shared_ptr<DialogElement>> el;
+
+    std::vector<std::string> test {"tetsing", "test"};
+    std::vector<std::string> test2 {"tetsing2", "test2"};
+    el.push_back(std::make_shared<ButtonsElement>(test, false));
+    el.push_back(std::make_shared<ButtonsElement>(test2, false));
+    el.push_back(std::make_shared<StringElement>("string test", 11));
+
+
+
+	Dialog * dia = new Dialog(el);
 	focused = dia;
 	logMessage("Created editor and fileviewer objects");
 	update_panels();
