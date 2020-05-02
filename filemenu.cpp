@@ -234,6 +234,15 @@ namespace filemenu{
 			fsys::path getCurrentItem(){
 				return menu_choices[current_index];
 			}
+			// returns the index of the path specified
+			int getIndexOf(std::string path){
+				for(int i = 0; i < num_files; i++){
+					if (menu_choices[i].u8string() == path){
+						return i;
+					} 
+				}
+				return -1;
+			}
 
 			void menu_down(){
 				if (current_index == num_files - 1){

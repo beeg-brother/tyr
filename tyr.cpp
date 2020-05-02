@@ -756,63 +756,75 @@ std::string parseMessage(std::string message_contents){
 	std::string reply;
 	// turn the string into an array of strings, each representing the items
 	std::vector<std::string> message_items = splitString(message_contents,',');
-	// if the message is a getter request
-	if (message_items[0] == "g"){
-		// if the plugin is asking for the editor cursor position
-		if (message_items[1] == "ed_curs"){
-			// evan idk how to do this so you're gonna need to do this
-		}
-		// if the plugin is asking for the currently selected item in the file viewer
-		if (message_items[1] == "file_curs"){
-			reply = fs->nmenu->getCurrentItem().u8string();
-		}
-		// if the plugin is asking for the character at a certain location
-		if (message_items[1] == "ed_char"){
-			// look at the arguments provided (i guess they'll be coords)
-			int x_coord = stoi(message_items[2]);
-			int y_coord = stoi(message_items[3]);
-			// some logic that gets the character at that location in the editor window
-		}
-		// if the plugin is asking for the filename of the currently open file:
-		if (message_items[1] == "filename"){
-			// file opening is not currently implemented yet so we cry
-		}
-		// if the plugin is asking for the length of the currently open file
-		if (message_items[1] == "num_lines"){
-			// cry
-		}
-		if (message_items[1] == ""){
 
-		}
+	// if the plugin is asking for the editor cursor position
+	if (message_items[0] == "get_ed_curs"){
+		// evan idk how to do this so you're gonna need to do this
 	}
-
-
-
-	// if the message is a setter
-	if (message_items[0] == "s"){
-		// these next 4 are just file viewer movement requests
-		if (message_items[1] == "file_down"){
-			fs->nmenu->menu_down();
-			reply = "file viewer moved down";
+	if(message_items[0] == "set_ed_curs"){
+		// also don't know how to do this
+	}
+	// if the plugin is asking for the currently selected item in the file viewer
+	if (message_items[0] == "get_file_curs"){
+		reply = fs->nmenu->getCurrentItem().u8string();
+	}
+	if (message_items[0] == "set_file_curs"){
+		// get the index of the file that we're looking for
+		int index = fs->nmenu->getIndexOf(message_items[1]);
+		// check to make sure that the thing we are looking for exists
+		if (index != -1){
+			fs->nmenu->setCurrentItem(index);
+			reply = "set file cursor to " + message_items[1];
 		}
-		if (message_items[1] == "file_up"){
-			fs->nmenu->menu_up();
-			reply = "file viewer moved up";
-		}
-		if (message_items[1] == "file_collapse"){
-			fs->nmenu->menu_left();
-			reply = "file viewer moved left";
-		}
-		if (message_items[1] == "file_expand"){
-			fs->nmenu->menu_right();
-			reply = "file viewer moved right";
+		else{
+			reply = "that path is not in the file menu";
 		}
 
 	}
+	// if the plugin is asking for the character at a certain location
+	if (message_items[0] == "get_ed_char"){
+		// look at the arguments provided (i guess they'll be coords)
+		int x_coord = stoi(message_items[1]);
+		int y_coord = stoi(message_items[2]);
+		// some logic that gets the character at that location in the editor window
+	}
+	if (message_items[0] == "set_ed_char"){
+		// look at the arguments provided (i guess they'll be coords)
+		int x_coord = stoi(message_items[1]);
+		int y_coord = stoi(message_items[2]);
+		// get the character that should be placed there
+		char new_char = message_items[3].c_str()[0];
+		// some logic that sets the character at the coordinates
+
+	}
+	// if the plugin is asking for the filename of the currently open file:
+	if (message_items[0] == "get_filename"){
+		// file opening is not currently implemented yet so we cry
+	}
+	// if the plugin is asking for the length of the currently open file
+	if (message_items[0] == "get_num_lines"){
+		// cry
+	}
+	// these next 4 are just file viewer movement requests
+	if (message_items[0] == "file_down"){
+		fs->nmenu->menu_down();
+		reply = "file viewer moved down";
+	}
+	if (message_items[0] == "file_up"){
+		fs->nmenu->menu_up();
+		reply = "file viewer moved up";
+	}
+	if (message_items[0] == "file_collapse"){
+		fs->nmenu->menu_left();
+		reply = "file viewer collapsed current item";
+	}
+	if (message_items[0] == "file_expand"){
+		fs->nmenu->menu_right();
+		reply = "file viewer expanded current item";
+	}
+
 	return reply;
 }
-
-
 
 void start_server(std::string ipc_path){
 	// create the zmq context
