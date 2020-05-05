@@ -38,6 +38,7 @@ struct Cursor {
 	// line_position means the position of the cursor in this line (x-value ish)
 	int line_num, line_position;
 };
+
 // gets the current time as a string timestamp
 std::string getCurrentTime(){
 	time_t _tm =time(NULL );
@@ -163,6 +164,23 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
     init_pair(selectedMenuItemColor,color_map["selectedItem"], -1);
 	
 	return color_map;
+}
+
+void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2){
+    int h = y2 - y1;
+    int w = x2 - x1;
+    wmove(win, y1, x1);
+    wvline(win, ACS_VLINE | attrs, h);
+    waddch(win, ACS_ULCORNER | attrs);
+    whline(win, ACS_HLINE | attrs, w - 1);
+    wmove(win, y1, x2);
+    wvline(win, ACS_VLINE | attrs, h);
+    waddch(win, ACS_URCORNER | attrs);
+    wmove(win, y2, x1);
+    whline(win, ACS_HLINE | attrs, w);
+    waddch(win, ACS_LLCORNER | attrs);
+    wmove(win, y2, x2);
+    waddch(win, ACS_LRCORNER | attrs);
 }
 
 int screen_rows, screen_cols;
@@ -506,11 +524,76 @@ class FileViewer : public Window{
 // TODO: make only some kinds of DialogElements focusable
 class DialogElement {
     public:
+        bool isFocused = false;
         virtual void handleInput(int c) = 0;
         virtual void refresh(WINDOW* win, int startY) = 0;
         virtual void onFocus() = 0;
         virtual void deFocus() = 0;
         virtual int requestNumLines(int width) = 0;
+};
+
+class InputElement : public DialogElement{
+    public:
+        std::string contents;
+        int numLines;
+        int position;
+        // TODO: implement horizontal scrolling
+
+        InputElement(int lines){
+            // TODO: implement lines
+            numLines = lines;
+            position = 0;
+        }
+
+        void onFocus(){
+            isFocused = true;
+            curs_set(1);
+            return;
+        }
+
+        void deFocus(){
+            isFocused = false;
+            curs_set(1);
+            return;
+        }
+
+        int requestNumLines(int width){
+            // TODO: implement lines
+            return 3;
+        }
+
+        void refresh(WINDOW* win, int startY){
+            draw_box(win, COLOR_PAIR(borderFocusedColor), startY, 0, startY + 2, getmaxx(win) - 1);
+//            attron(COLOR_PAIR(textColor));
+            mvwaddnstr(win, startY + 1, 1, contents.data(), getmaxx(win) - 2);
+//            attroff(COLOR_PAIR(textColor));
+            wmove(win, startY + 1, position + 1);
+        }
+
+        void handleInput(int c){
+            // TODO: move cursor to proper position
+            logMessage("InputElement received " + std::to_string(KEY_BACKSPACE));
+            switch(c){
+                case KEY_RIGHT :
+                    // TODO: bounding based on window, moving cursor
+                    position++;
+                    break;
+                case KEY_LEFT :
+                    position--;
+                    break;
+                case 127 :
+                    // TODO: clearing old chars
+                    if (position != 0){
+                        contents.erase(position - 1, 1);
+                        position--;
+                    }
+                    break;
+                default:
+                    contents.insert(position, 1, (char) c);
+                    position++;
+
+            }
+        }
 };
 
 // used to provide button options to the user
@@ -522,7 +605,6 @@ class ButtonsElement : public DialogElement {
         std::vector<std::string>::iterator selected;
         short numOptions;
         bool eos;
-        bool isFocused = false;
         // TODO: this
         short intendedYLevel = 3;
 
@@ -583,28 +665,12 @@ class ButtonsElement : public DialogElement {
             return;
         }
 
-        void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2){
-            int h = y2 - y1;
-            int w = x2 - x1;
-            wmove(win, y1, x1);
-            wvline(win, ACS_VLINE | attrs, h);
-            waddch(win, ACS_ULCORNER | attrs);
-            whline(win, ACS_HLINE | attrs, w - 1);
-            wmove(win, y1, x2);
-            wvline(win, ACS_VLINE | attrs, h);
-            waddch(win, ACS_URCORNER | attrs);
-            wmove(win, y2, x1);
-            whline(win, ACS_HLINE | attrs, w);
-            waddch(win, ACS_LLCORNER | attrs);
-            wmove(win, y2, x2);
-            waddch(win, ACS_LRCORNER | attrs);
-        }
-
         void refresh(WINDOW* win, int startY){
-            // TOOD: center buttons
+            // TODO: center buttons
+            intendedYLevel = startY + 1;
             int currentX = 0;
             for(std::string s: options){
-                if (s == *selected){
+                if (isFocused & (s == *selected)){
                     draw_box(win, COLOR_PAIR(borderFocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
                 } else {
                     draw_box(win, COLOR_PAIR(borderUnfocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
@@ -631,11 +697,13 @@ class StringElement : public DialogElement {
         }
 
         void onFocus(){
+            isFocused = true;
             curs_set(0);
             return;
         }
 
         void deFocus(){
+            isFocused = false;
             curs_set(1);
             return;
         }
@@ -658,7 +726,7 @@ class StringElement : public DialogElement {
 class Dialog : public Window{
 	protected:
 		std::vector<std::shared_ptr<DialogElement>> elements;
-        short currentElement;
+        std::vector<std::shared_ptr<DialogElement>>::iterator currentElement;
 
 	public:
 
@@ -682,9 +750,9 @@ class Dialog : public Window{
 
             // offsets to account for the border
             Window::create_windows(height + 2, width + 2, start_y - 1, start_x - 1, height, width, start_y, start_x);
-            currentElement = 0;
+            currentElement = elements.begin();
 
-            elements[0]->onFocus();
+            (*currentElement)->onFocus();
 
             refresh();
             wrefresh(Window::win);
@@ -703,14 +771,28 @@ class Dialog : public Window{
 
 		void handleInput(int c){
 			switch(c){
-				case(KEY_STAB) :
-					currentElement += (currentElement + 1 + elements.size()) % elements.size();
+				case('\t') :
+				case(KEY_DOWN) :
+                    (*currentElement)->deFocus();
+					currentElement++;
+					if (currentElement == elements.end()){
+					    currentElement = elements.begin();
+					}
+                    (*currentElement)->onFocus();
 				    break;
+
 				case(KEY_BTAB) :
-					currentElement = (currentElement - 1 + elements.size()) % elements.size();
+				case(KEY_UP) :
+                    (*currentElement)->deFocus();
+                    if (currentElement == elements.begin()){
+                        currentElement = elements.end();
+                    }
+                    currentElement--;
+                    (*currentElement)->onFocus();
 				    break;
+
 				default:
-				    elements[currentElement]->handleInput(c);
+                    (*currentElement)->handleInput(c);
 				    break;
 			};
 			refresh();
@@ -888,7 +970,7 @@ int main() {
     std::vector<std::string> test {"tetsing", "test"};
     std::vector<std::string> test2 {"tetsing2", "test2"};
     el.push_back(std::make_shared<ButtonsElement>(test, false));
-    el.push_back(std::make_shared<ButtonsElement>(test2, false));
+    el.push_back(std::make_shared<InputElement>(1));
     el.push_back(std::make_shared<StringElement>("string test", 11));
 
 
