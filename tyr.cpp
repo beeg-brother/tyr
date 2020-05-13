@@ -166,6 +166,15 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
 	return color_map;
 }
 
+// draw a border using line graphics to the rectangle described by the points (x1, y1) and (x2, y2)
+// (x1, y1) is higher and more to the left than (x2, y2), swapping this order breaks it
+// note that as is customary with curses, y-values come first in the argument list
+// win: the WINDOW to draw to
+// attrs: any attributes to combine with the line characters (namely colors)
+// y1: y-value of the upper left point
+// x1: x-value of the upper left point
+// y2: y-value of the lower right point
+// x2: x-value of the lower right point
 void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2){
     int h = y2 - y1;
     int w = x2 - x1;
@@ -186,18 +195,52 @@ void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2){
 int screen_rows, screen_cols;
 
 class Window {
+    // A wrapper class to allow for easy stacking of windows to properly simulate a GUI in the CLI
+    // Uses panels to achieve this
+    // Each window has a border. To do this, a separate border window and panel are used.
+    // Subclasses are allowed to define the way the outer border offset works. See create_windows.
+
 	public:
+        // width and height of the window, but these aren't properly updated yet (resize not yet implemented)
 		int width, height;
+        // the PANEL the window resides in, allowing for easy stacking
 		PANEL *pan;
+		// the WINDOW in use
 		WINDOW *win;
+		// the PANEL the outer border resides in
 		PANEL *border_pan;
+		// the WINDOW the outer border is written to
 		WINDOW *border_win;
 
-		virtual void handleInput(int) = 0;
+		// handles any input characters from the user
+		// certain characters are intercepted by the top-level logic:
+		//     * control+tab
+		//     * possbily more
+		// c: the character the user input
+		virtual void handleInput(int c) = 0;
+
+		// any actions that need to be taken when the user switches focus to the window
+		// for example, changing the border color, updating the contents of the window
 		virtual void onFocus() = 0;
+
+		// any actions that need to be taken when the user switches focus away from the window
+		// for example, changing the border color
 		virtual void deFocus() = 0;
-		virtual void resize(int, int) = 0;
+
+		// resize the panels and windows
+		// this is designed to be used for when the terminal changes sizes, but other uses are allowed
+		// y: the intended height of the windows
+		// x: the intended width of the windows
+		virtual void resize(int y, int x) = 0;
+
 		// this method should be called by subclass methods, not called directly
+		// this creates the two windows and panels, but allows for customization of the offset of the border
+		// this allows for use of the border panel: for example, the line numbers in the Editor subclass are written to the border window
+		// outer_h: the height of the border window
+		// outer_w: the width of the border window
+		// outer_y0: the y-value of the upper left corner of the border window
+		// outer_x0: the x-value of the upper left corner of the border window
+		// extrapolate for the other 4 arguments
 		void create_windows(int outer_h, int outer_w, int outer_y0, int outer_x0, int inner_h, int inner_w, int inner_y0, int inner_x0){
 			width = outer_w;
 			height = outer_h;
@@ -210,6 +253,8 @@ class Window {
 			wrefresh(win);
 		}
 
+		// this draws the border of the window, allowing for attributes to be specified
+		// this draws only onto border_win
 		void drawBorder(int attrs){
 			wborder(border_win, (ACS_VLINE | attrs),
 					(ACS_VLINE | attrs),
@@ -524,12 +569,46 @@ class FileViewer : public Window{
 // TODO: make only some kinds of DialogElements focusable
 class DialogElement {
     public:
+        // is the user focused on this element?
         bool isFocused = false;
+
+        // handles input characters
+        // some characters are intercepted by the Dialog class:
+        //     * tab / shift+tab
+        //     * up / down
+        // that's all so far
+        // c: the character needing to be handled
         virtual void handleInput(int c) = 0;
+
+        // refreshes the DialogElement on the window
+        // win: the window the Dialog is painted on
+        // startY: the first y-value the DialogElement is allowed to use
+        //         elements can use from startY to startY+requestNumLines(width)
+        //         painting outside of this area will be overwritten if there is another element below
+        //         elements can use the entire width of the window
         virtual void refresh(WINDOW* win, int startY) = 0;
+
+        // any actions that need to be done when the user focuses on the element
+        // for example: changing cursor settings (visible/invis), changing border colors to look focused, etc
         virtual void onFocus() = 0;
+
+        // any actions that need to be done as the user switches focus away from the element
+        // for example: resetting cursor settings, changing border colors to look unfocused, etc
         virtual void deFocus() = 0;
+
+        // this allows the DialogElement to reserve space in the window based on a width provided
+        // note that this does not guarantee that the next refresh() will use a window with this width
+        // storing width in the DialogElement is highly discouraged as it is generally pointless
+        // width: the size of the hypothetical window
         virtual int requestNumLines(int width) = 0;
+
+        // this is called on the focused element of a Dialog window on each refresh
+        // it allows the DialogElement to place the cursor where it needs to be for the Dialog appearance
+        // this basically only applies for the InputElement, but it might be useful in the future
+        // note that it is perfectly valid behavior to just return if the cursor is invisible anyway - efficiency
+        // win: the window the Dialog is painted on
+        // startY: the first y-value that the DialogElement was allowed to draw in (see refresh() )
+        virtual void placeCursor(WINDOW* win, int startY) = 0;
 };
 
 class InputElement : public DialogElement{
@@ -568,6 +647,10 @@ class InputElement : public DialogElement{
             mvwaddnstr(win, startY + 1, 1, contents.data(), getmaxx(win) - 2);
 //            attroff(COLOR_PAIR(textColor));
             wmove(win, startY + 1, position + 1);
+        }
+
+        void placeCursor(WINDOW* win, int startY){
+            wmove(win, startY+1, std::min(getmaxx(win) - 2, position + 1));
         }
 
         void handleInput(int c){
@@ -632,6 +715,26 @@ class ButtonsElement : public DialogElement {
             return 3;
         }
 
+        void refresh(WINDOW* win, int startY){
+            // TODO: center buttons
+            intendedYLevel = startY + 1;
+            int currentX = 0;
+            for(std::string s: options){
+                if (isFocused & (s == *selected)){
+                    draw_box(win, COLOR_PAIR(borderFocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
+                } else {
+                    draw_box(win, COLOR_PAIR(borderUnfocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
+                }
+                mvwaddstr(win, intendedYLevel, currentX + 1, s.data());
+                currentX += s.size() + 2;
+            }
+            return;
+        }
+
+        void placeCursor(WINDOW* win, int startY){
+            return;
+        }
+
         void handleInput(int c){
             logMessage("ButtonDialog received input: " + std::to_string(c));
             switch(c){
@@ -665,21 +768,6 @@ class ButtonsElement : public DialogElement {
             return;
         }
 
-        void refresh(WINDOW* win, int startY){
-            // TODO: center buttons
-            intendedYLevel = startY + 1;
-            int currentX = 0;
-            for(std::string s: options){
-                if (isFocused & (s == *selected)){
-                    draw_box(win, COLOR_PAIR(borderFocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
-                } else {
-                    draw_box(win, COLOR_PAIR(borderUnfocusedColor), intendedYLevel - 1, currentX, intendedYLevel + 1, currentX + s.size() + 1);
-                }
-                mvwaddstr(win, intendedYLevel, currentX + 1, s.data());
-                currentX += s.size() + 2;
-            }
-            return;
-        }
 };
 
 // used to display a string to the user
@@ -713,20 +801,28 @@ class StringElement : public DialogElement {
             return length / width + (length % width != 0);
         }
 
+        void refresh(WINDOW* win, int yval){
+            mvwaddstr(win, yval, 0, message);
+        }
+
+        void placeCursor(WINDOW* win, int startY){
+            return;
+        }
+
         void handleInput(int c){
             // do nothing
             return;
         }
 
-		void refresh(WINDOW* win, int yval){
-			mvwaddstr(win, yval, 0, message);
-		}
 };
 
 class Dialog : public Window{
 	protected:
 		std::vector<std::shared_ptr<DialogElement>> elements;
         std::vector<std::shared_ptr<DialogElement>>::iterator currentElement;
+        // note that this is not guaranteed to be accurate, but it was updated the last time the Dialog was resized
+        // if it is empty on a refresh, it is initialized
+        std::vector<int> cached_startYs_cumulative;
 
 	public:
 
