@@ -834,6 +834,9 @@ class Dialog : public Window{
 
             elements = els;
 
+            // this is hacky, unexpected, and does nothing right now
+            elements.push_back(std::make_shared<ButtonsElement>(std::vector<std::string> {"exit"}, false));
+
             int lines = 0;
             for(std::vector<std::shared_ptr<DialogElement>>::iterator it = elements.begin(); it != elements.end(); it++){
                 lines += (*it)->requestNumLines(width);
@@ -854,14 +857,26 @@ class Dialog : public Window{
             wrefresh(Window::win);
         }
 
-		void refresh(){
+        void reloadHeights(){
             int currY = 0;
+            cached_startYs_cumulative.clear();
+            for(int i = 0; i < elements.size(); i++){
+                cached_startYs_cumulative.push_back(currY);
+                currY += elements[i]->requestNumLines(width);
+            }
+        }
+
+		void refresh(){
+            if(cached_startYs_cumulative.empty()){
+                reloadHeights();
+            }
 			for(int i = 0; i < elements.size(); i++){
 				wattron(win, COLOR_PAIR(textColor));
-				elements[i]->refresh(Window::win, currY);
-				currY += elements[i]->requestNumLines(width);
+				elements[i]->refresh(Window::win, cached_startYs_cumulative[i]);
 				wattroff(win, COLOR_PAIR(textColor));
 			}
+			// note: it - vector.begin() gets the index of iterator it
+            (*currentElement)->placeCursor(win, cached_startYs_cumulative[currentElement - elements.begin()]);
 			wrefresh(Window::win);
 		}
 
@@ -900,10 +915,12 @@ class Dialog : public Window{
 	}
 
 	void onFocus(){
-		return;
+        (*currentElement)->onFocus();
+        return;
 	}
 
 	void deFocus(){
+        (*currentElement)->deFocus();
 		return;
 	}
 };
