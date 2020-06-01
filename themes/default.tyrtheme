@@ -1,8 +1,7 @@
-# background color 
-r,g,b
-# text color
-r,g,b
-# border colors
-r,g,b
-# highlight color
-r,g,b
+borderFocused:40
+borderUnfocused:21
+text:40
+directories:154
+files:226
+lineNumbers:245
+selectedItem:255
