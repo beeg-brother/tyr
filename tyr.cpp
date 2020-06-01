@@ -283,6 +283,8 @@ class Editor : public Window{
 		// number of rows in the editing window
 		int window_height;
 
+		std::filesystem::path filepath;
+
 
 		Editor(int h, int w, int y0, int x0){
 			create_windows(h, w, y0, x0);
@@ -294,6 +296,22 @@ class Editor : public Window{
 			getmaxyx(win, window_height, window_width);
 			rewrite();
 		}
+
+        Editor(int h, int w, int y0, int x0, std::filesystem::path filename){
+            create_windows(h, w, y0, x0);
+            cursor = Cursor();
+            cursor.screen_x = 0;
+            cursor.screen_y = 0;
+            filepath = filename;
+            std::string temp_string;
+            std::ifstream file(filepath.c_str());
+            while(std::getline(file, temp_string)){
+                strs.push_back(temp_string);
+            }
+            scroll_offset = 0;
+            getmaxyx(win, window_height, window_width);
+            rewrite();
+        }
 
 		// create editor windows, leaving room for line numbering.
 		void create_windows(int h, int w, int y0, int x0){
