@@ -1,6 +1,7 @@
 #ifndef FILEMENU_H
 #define FILEMENU_H
 
+#include "constants.h"
 #include <curses.h>
 #include <panel.h>
 #include <iostream>
@@ -10,50 +11,96 @@
 #include <filesystem>
 #include <vector>
 #include <assert.h>
+#include <algorithm>
 #include <fstream>
+#include <map>
 
 namespace fsys = std::filesystem;
 
-namespace filemenu {
-	class Menu{
+namespace filemenu{
+	class Menu {
 		public:
-			//constructors
+			// the list of choices that will show up in the menu
+			std::vector<fsys::path> menu_choices;
+			// the number of files in the menu choices
+			int num_files;
+			// the root path, where tyr is opened from
+			fsys::path cwd = fsys::current_path();
+			// the window that the menu will display in
+			WINDOW* win;
+			// drawing related things:
+			int window_width;
+			int window_height;
+			int scroll_start = 0;
+			// the index of the currently selected item
+			int current_index;
+			// the theme settings are stored here or something
+			std::map<std::string,int> color_map;
+			/* Menu Constructors*/
+
 			Menu();
+
 			Menu(WINDOW* window);
+
 			Menu(std::vector<fsys::path> choices);
+
 			Menu(std::vector<fsys::path> choices, WINDOW* window);
-			// sets the window that the menu will be drawn onto
+
+			/* Color System functions */
+			void init_color_pairs();
+			void setColorMap(std::map<std::string, int > map);
+
+			/* Window functions*/
+			
+			// Sets the window on which the menu is being drawn
 			void setWindow(WINDOW* window);
-			// draws the menu onto the window
+			// draws the menu onto whatever window is currently selected
 			void drawMenu();
-			// remove the menu from the window
+			// removes the menu from whatever window is currently selected
 			void removeMenu();
-			// gets the files from a directory as a vector of paths
+			// gets files from the given directory as a vector of paths
 			std::vector<fsys::path> getDirFiles(fsys::path path);
-			// update the menu by adding the new elements that the index given
+			
+			// updates the menu on the screen
+			// takes in the new elements and the position in which they are supposed to be put in
 			void updateMenu(std::vector<fsys::path> new_elements, int index);
-			// sets the menu items to the vector of paths passed to the function
+
+			// changes the vector of paths that the menu uses
 			void setMenuItems(std::vector<fsys::path> path_vector);
-			// collapse a directory
+
+			// collapses the directory located in the menu at the given index 
 			void collapseDirectory(int directoryIndex);
-			// expands a directory to show its subdirectories
+
+			// expands the directory located at the index in the menu
 			void expandDirectory(int directoryIndex);
-			// sets the selection to the item at the index
+
+			// sets the user selection to the path at the index provided
 			void setCurrentItem(int index);
-			// sets the current selection to the item with the same path
-			void setCurrentItem(fsys::path path);
-			// returrns the current list of menu items
+
+			// returns the vector of all the current paths in the menu
 			std::vector<fsys::path> getMenuItems();
-			// returns the current item that the user is selecting
+
+			// returns the path of the currently selected item
 			fsys::path getCurrentItem();
-			//input handling for the menu
+
+			// returns the index of the path specified
+			int getIndexOf(std::string path);
+
+			// moves the menu down 1 slot
 			void menu_down();
+
+			// moves the menu up 1 slot
 			void menu_up();
-			void menu_right();
+
+			// collapses the selected item if its a directory
 			void menu_left();
-			// scrolls the menu display to fit the screen
-			void scrollToFit();
+
+			// expands the selected item if its a directory
+			void menu_right();
+
+			// scrolls the menu items to fit the current item on the screen
+			void scrollToFit();	
 	};
 }
 
-#endif
+#endif /* FILEMENU_H */

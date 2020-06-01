@@ -7,7 +7,7 @@
 #include <string>
 #include <thread>
 #include "constants.h"
-#include "filemenu.cpp"
+#include "filemenu.h"
 #include <filesystem>
 #include <vector>
 #include <assert.h>
