@@ -14,7 +14,6 @@
 #include <fstream>
 #include <zmq.hpp>
 #include <map>
-#include <chrono>
 
 #ifdef _WIN32
 #include <Windows.h>
