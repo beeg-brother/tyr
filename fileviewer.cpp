@@ -3,7 +3,7 @@
 //
 
 #include "constants.h"
-#include "filemenu.cpp"
+#include "filemenu.h"
 #include "fileviewer.h"
 #include "window.h"
 #include <map>

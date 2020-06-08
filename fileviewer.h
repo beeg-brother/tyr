@@ -7,7 +7,7 @@
 #define TYR_FILEVIEWER_H
 
 #include "constants.h"
-#include "filemenu.cpp"
+#include "filemenu.h"
 #include "window.h"
 #include <map>
 

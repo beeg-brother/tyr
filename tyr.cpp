@@ -1,4 +1,6 @@
 #include "window.h"
+#include "dialog.h"
+#include "fileviewer.h"
 #include "editor.h"
 #include "cursor.h"
 #include <cstdio>
@@ -183,61 +185,6 @@ void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2){
 }
 
 int screen_rows, screen_cols;
-
-class FileViewer : public window::Window{
-	protected:
-	public:
-		FileViewer(int h, int w, int y0, int x0, std::map<std::string,int> color_map){
-			create_windows(h, w, y0, x0);
-			fsys::path cwd = fsys::current_path();
-			nmenu->setWindow(getWindow());
-			nmenu->setMenuItems(nmenu->getDirFiles(cwd));
-			nmenu->setColorMap(color_map);
-			nmenu->drawMenu();
-
-		}
-
-		// my new version  of menus
-		Menu* nmenu = new Menu();
-
-		// TODO: resizing
-		void resize(int, int){
-			return;
-		};
-
-		void create_windows(int h, int w, int y0, int x0){
-			Window::create_windows(h, w, y0, x0, h - 2, w - 2, y0 + 1, x0 + 1);
-		}
-
-		WINDOW* getWindow(){
-			return Window::win;
-		}
-
-		void onFocus(){
-			return;
-		}
-
-		void deFocus(){
-			return;
-		}
-
-		void handleInput(int c){
-			switch(c){
-				case KEY_DOWN:
-					nmenu->menu_down();
-					break;
-				case KEY_UP:
-					nmenu->menu_up();
-					break;
-				case KEY_RIGHT:
-					nmenu->menu_right();
-					break;
-				case KEY_LEFT:
-					nmenu->menu_left();
-					break;
-			}
-		}
-};
 
 // TODO: make only some kinds of DialogElements focusable
 class DialogElement {
@@ -599,7 +546,7 @@ class Dialog : public window::Window{
 };
 
 editor::Editor *ed;
-FileViewer *fs;
+fileviewer::FileViewer *fs;
 window::Window *focused;
 
 // TODO: make mainLoop deal with sending input to the right window.... :(
@@ -749,7 +696,7 @@ int main() {
 	
 	// creates the editor screen
 	ed = new editor::Editor(screen_rows, screen_cols-20, 0, 20);
-	fs = new FileViewer(screen_rows, 21, 0, 0, color_map);
+	fs = new fileviewer::FileViewer(screen_rows, 21, 0, 0, color_map);
 
 	std::vector<std::shared_ptr<DialogElement>> el;
 

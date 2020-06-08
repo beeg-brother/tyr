@@ -1,0 +1,12 @@
+
+
+Mon Jun  1 20:36:57 2020: Obtained ipc plugin path
+Mon Jun  1 20:36:57 2020: Created editor and fileviewer objects
+Mon Jun  1 20:36:57 2020: Created server thread for ipc server
+Mon Jun  1 20:36:57 2020: Created zmq context.
+Mon Jun  1 20:36:57 2020: Created zmq socket
+Mon Jun  1 20:36:57 2020: Bound socket to ipc path
+Mon Jun  1 20:36:58 2020: ButtonDialog received input: 261
+Mon Jun  1 20:36:58 2020: tetsing
+Mon Jun  1 20:36:59 2020: ButtonDialog received input: 260
+Mon Jun  1 20:36:59 2020: left
