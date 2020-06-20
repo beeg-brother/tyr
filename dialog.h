@@ -15,9 +15,13 @@
 
 namespace dialog {
 
+    void draw_box(WINDOW* win, int attrs, int y1, int x1, int y2, int x2);
+
     // TODO: make only some kinds of DialogElements focusable
     class DialogElement {
     public:
+
+        DialogElement();
 
         bool isFocused;
 
@@ -61,7 +65,7 @@ namespace dialog {
         std::vector<std::string>::iterator selected;
         short numOptions;
         bool eos;
-        short intendedYLevel = 3;
+        short intendedYLevel;
 
         ButtonsElement(std::vector <std::string> opts, bool exitOnSelect);
 

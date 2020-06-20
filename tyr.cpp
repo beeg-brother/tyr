@@ -154,12 +154,13 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
 	init_pair(filesColor, color_map["files"], -1);
 	init_pair(lineNumbersColor, color_map["lineNumbers"], -1);
     init_pair(selectedMenuItemColor,color_map["selectedItem"], -1);
-	
+
 	return color_map;
 }
 
 
 int screen_rows, screen_cols;
+
 
 editor::Editor *ed;
 fileviewer::FileViewer *fs;
