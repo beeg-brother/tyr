@@ -351,12 +351,6 @@ namespace dialog {
 
     void Dialog::refresh(){
 
-        std::ofstream logfile;
-        logfile.open("logs/tyr.log", std::ofstream::out | std::ofstream::app);
-        logfile << "\n" << "refreshing the Dialog";
-        logfile.close();
-
-
         if(cached_startYs_cumulative.empty()){
             reloadHeights();
         }
