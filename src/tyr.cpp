@@ -312,7 +312,7 @@ int main() {
 	logMessage("Obtained ipc plugin path");
 	
 	// creates the editor screen
-	ed = new editor::Editor(screen_rows, screen_cols-20, 0, 20);
+	ed = new editor::Editor(screen_rows, screen_cols-20, 0, 20, std::filesystem::path("example"));
 	fs = new fileviewer::FileViewer(screen_rows, 21, 0, 0, color_map);
 
 	std::vector<std::shared_ptr<dialog::DialogElement>> el;
