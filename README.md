@@ -2,7 +2,7 @@
 
 ## Build Instructions
 Current run command:
-`g++-8 tyr.cpp filemenu.cpp -lncurses -lpanel -lmenu -lzmq -pthread -std=c++17 -lstdc++fs`
+`g++-8 src/* -o tyr -lncurses -lpanel -lzmq -pthread -std=c++17`
 
 ## Plugins
 The default ipc path that tyr communicates on is `/tmp/tyrplugins.ipc`, although this can be changed via the config file for tyr (eventually). Tyr uses zeromq to communicate over ipc, specifically a REP/REQ set of sockets. An example connection script for Python is as follows:
