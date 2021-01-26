@@ -107,26 +107,25 @@ namespace filemenu{
 							}
 						}
 					}
-					
+					// if the item is a directory
 					if (fsys::is_directory(menu_choices[currenty])){
-						wattron(win,A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor));
-						if (currenty == current_index){
-							wattron(win, A_BOLD| COLOR_PAIR(selectedMenuItemColor));
-						}
-						mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
-						wattroff(win, A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor) | A_BOLD);
+						// directories are underlined, dimmed, and the color chosen in the theme
+						wattrset(win, A_UNDERLINE | A_DIM | COLOR_PAIR(directoriesColor));
 					}
-					else{
-						// items that aren't selected
-						wattron(win,A_DIM | COLOR_PAIR(filesColor));
-						if (currenty == current_index){
-							wattron(win, A_BOLD | COLOR_PAIR(selectedMenuItemColor));
-						}
-						mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
-						wattroff(win, A_DIM | COLOR_PAIR(filesColor) | A_BOLD);
+					// otherwise its just a file
+					else {
+						// files are dimmed and the color chosen for them in the theme
+						wattrset(win, A_DIM | COLOR_PAIR(filesColor));
+					}
+					// if its selected
+					if (currenty == current_index){
+						wattrset(win, A_BOLD | COLOR_PAIR(selectedMenuItemColor));
 					}
 
-
+					//add the item to the menu
+					mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
+					//reset the text attributes
+					wstandend(win);
 				}
 			}
 		}

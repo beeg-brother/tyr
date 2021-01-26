@@ -7,3 +7,4 @@ tyr
 
 test
 logs/tyr.log
+src/*.gch
