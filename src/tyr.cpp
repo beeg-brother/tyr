@@ -75,7 +75,7 @@ void logMessage(std::string message){
 	// write the current timestamp and the message to it
 	std::string toWrite = getCurrentTime() + ": " + message;
 	toWrite.erase(std::remove(toWrite.begin(), toWrite.end(), '\n'), toWrite.end());
-	logfile << "\n" <<toWrite;
+	logfile << toWrite << "\n";
 	// close the access to the file
 	logfile.close();
 }
@@ -142,6 +142,7 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
 			if (line.size() != 0){
 				int colon_index = line.find(':');
 				color_map[line.substr(0,colon_index)] = stoi(line.substr(colon_index + 1));
+				logMessage(line.substr(0, colon_index) + " = " + std::to_string(color_map.at(line.substr(0, colon_index))));
 			}
 		}
 	}
@@ -304,9 +305,11 @@ void curses_setup(){
 int main() {
 	curses_setup();
 	clearLogFile();
+
 	// read the config file
 	std::map<std::string,std::string> config_settings = read_config();
 	std::map<std::string,int> color_map = theme_setup(config_settings);
+
 	// set up the ipc path according to the config file
 	std::string ipc_path = config_settings["ipc_path"];
 	logMessage("Obtained ipc plugin path");
