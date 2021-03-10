@@ -105,7 +105,7 @@ namespace editor {
             // create a right-padded string for the line number
             std::sprintf(out, "%*d", line_num_width, i);
             //TODO: line numbers are NOT the right color for some reason
-            mvwaddstr(Window::border_win, i, 1, out);
+            mvwaddnstr(Window::border_win, i, 1, out, line_num_width);
         }
 
         wattroff(win, COLOR_PAIR(lineNumbersColor));
