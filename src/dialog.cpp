@@ -11,6 +11,13 @@
 
 namespace dialog {
 
+    enum options : unsigned int {
+        returnOnEnter = 1 << 0,
+        returnOnLastElement = 1 << 1,
+        requireAll = 1 << 2,
+        
+    };
+
     // draw a border using line graphics to the rectangle described by the points (x1, y1) and (x2, y2)
     // (x1, y1) is higher and more to the left than (x2, y2), swapping this order breaks it
     // note that as is customary with curses, y-values come first in the argument list
@@ -87,7 +94,7 @@ namespace dialog {
 //        virtual void placeCursor(WINDOW* win, int startY) = 0;
 
 
-/*****************************************************
+/*****************************************************************************
  * class InputElement : public DialogElement
  */
     //std::string InputElement::contents;
@@ -119,7 +126,13 @@ namespace dialog {
     }
 
     void InputElement::refresh(WINDOW* win, int startY){
-        draw_box(win, COLOR_PAIR(borderFocusedColor), startY, 0, startY + 2, getmaxx(win) - 1);
+        int border_color;
+        if (isFocused){
+            border_color = COLOR_PAIR(borderFocusedColor);
+        } else {
+            border_color = COLOR_PAIR(borderUnfocusedColor);
+        }
+        draw_box(win, border_color, startY, 0, startY + 2, getmaxx(win) - 1);
 //            attron(COLOR_PAIR(textColor));
         mvwaddnstr(win, startY + 1, 1, contents.data(), getmaxx(win) - 2);
 //            attroff(COLOR_PAIR(textColor));
