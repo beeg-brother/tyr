@@ -1,3 +1,5 @@
+# note: to pick colors, refer to the ncurses source file test/ncurses.c, option c
+# sounds cryptic but like... that's the best I can do
 borderFocused:40
 borderUnfocused:21
 text:255
