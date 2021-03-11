@@ -25,6 +25,7 @@ namespace filebrowser {
 
     FileBrowser::FileBrowser(int h, int w, int y0, int x0, std::map<std::string, int> c_map) {
         create_windows(h, w, y0, x0);
+        getmaxyx(win, window_height, window_width);
         fsys::path cwd = fsys::current_path();
         setMenuItems(getDirFiles(cwd));
         color_map = c_map;
@@ -51,7 +52,7 @@ namespace filebrowser {
     }
 
     // TODO: possibly migrate this to 2 functions: generating the menu and actually writing it
-    // that way, the generation doesn't have to happen as frequently
+    //  that way, the generation doesn't have to happen as frequently
 
     // draws the menu onto the screen
     void FileBrowser::drawMenu(){
@@ -96,6 +97,7 @@ namespace filebrowser {
                             }
                         }
                     }
+
                     // if the item is a directory
                     if (fsys::is_directory(menu_choices[currenty])){
                         // directories are underlined, dimmed, and the color chosen in the theme
@@ -110,6 +112,7 @@ namespace filebrowser {
                     if (currenty == current_index){
                         wattrset(win, A_BOLD | COLOR_PAIR(selectedMenuItemColor));
                     }
+
 
                     //add the item to the menu
                     mvwaddnstr(win, currenty - scroll_start, prepends, menu_choices[currenty].filename().u8string().c_str(),window_width - prepends);
