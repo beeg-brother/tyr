@@ -7,6 +7,7 @@
 namespace fsys = std::filesystem;
 
 namespace filebrowser {
+    /*
     // the list of choices that will show up in the menu
     std::vector <fsys::path> menu_choices;
     // the number of files in the menu choices
@@ -14,7 +15,6 @@ namespace filebrowser {
     // the root path, where tyr is opened from
     fsys::path cwd = fsys::current_path();
     // drawing related things:
-    // TODO: possibly unnecessary, refactor to use getmaxxy()
     int window_width;
     int window_height;
     int scroll_start = 0;
@@ -22,6 +22,7 @@ namespace filebrowser {
     int current_index;
     // the theme settings are stored here or something
     std::map<std::string, int> color_map;
+     */
 
     FileBrowser::FileBrowser(int h, int w, int y0, int x0, std::map<std::string, int> c_map) {
         create_windows(h, w, y0, x0);
