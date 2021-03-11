@@ -12,7 +12,7 @@ plugin_path:./plugins
 theme_path:./themes
 
 #Selected theme
-theme:default.tyrtheme
+theme:derek.tyrtheme
 
 # Error log path (relative to root tyr directory)
 log_path:./logs
