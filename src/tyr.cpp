@@ -1,8 +1,9 @@
 #include "window.h"
 #include "dialog.h"
-#include "fileviewer.h"
+#include "filebrowser.h"
 #include "editor.h"
 #include "cursor.h"
+#include "constants.h"
 #include <cstdio>
 #include <curses.h>
 #include <panel.h>
@@ -11,8 +12,6 @@
 #include <clocale>
 #include <string>
 #include <thread>
-#include "constants.h"
-#include "filemenu.h"
 #include <filesystem>
 #include <vector>
 #include <assert.h>
@@ -28,7 +27,6 @@
 
 
 namespace fsys = std::filesystem;
-using namespace filemenu;
 
 
 // gets the current time as a string timestamp
@@ -65,7 +63,7 @@ std::map<std::string, std::string> read_config(){
 
 // logs a message to the location described in .tyrc
 void logMessage(std::string message){
-	///open the log file
+	// open the log file
 	// get the file path from the config settings
 	std::map<std::string, std::string> config_settings = read_config();
 	std::string log_file_path = config_settings["log_path"] + "/tyr.log";
@@ -164,7 +162,7 @@ int screen_rows, screen_cols;
 
 
 editor::Editor *ed;
-fileviewer::FileViewer *fs;
+filebrowser::FileBrowser *fb;
 window::Window *focused;
 
 // TODO: make mainLoop deal with sending input to the right window.... :(
@@ -199,14 +197,14 @@ std::string parseMessage(std::string message_contents){
 	}
 	// if the plugin is asking for the currently selected item in the file viewer
 	if (message_items[0] == "get_file_curs"){
-		reply = fs->nmenu->getCurrentItem().u8string();
+		reply = fb->getCurrentItem().u8string();
 	}
 	if (message_items[0] == "set_file_curs"){
 		// get the index of the file that we're looking for
-		int index = fs->nmenu->getIndexOf(message_items[1]);
+		int index = fb->getIndexOf(message_items[1]);
 		// check to make sure that the thing we are looking for exists
 		if (index != -1){
-			fs->nmenu->setCurrentItem(index);
+			fb->setCurrentItem(index);
 			reply = "set file cursor to " + message_items[1];
 		}
 		else{
@@ -240,19 +238,19 @@ std::string parseMessage(std::string message_contents){
 	}
 	// these next 4 are just file viewer movement requests
 	if (message_items[0] == "file_down"){
-		fs->nmenu->menu_down();
+		fb->menu_down();
 		reply = "file viewer moved down";
 	}
 	if (message_items[0] == "file_up"){
-		fs->nmenu->menu_up();
+		fb->menu_up();
 		reply = "file viewer moved up";
 	}
 	if (message_items[0] == "file_collapse"){
-		fs->nmenu->menu_left();
+		fb->menu_left();
 		reply = "file viewer collapsed current item";
 	}
 	if (message_items[0] == "file_expand"){
-		fs->nmenu->menu_right();
+		fb->menu_right();
 		reply = "file viewer expanded current item";
 	}
 
@@ -316,8 +314,8 @@ int main() {
 	
 	// creates the editor screen
 	ed = new editor::Editor(screen_rows, screen_cols-20, 0, 20, std::filesystem::path("example"));
-	fs = new fileviewer::FileViewer(screen_rows, 21, 0, 0, color_map);
-
+	fb = new filebrowser::FileBrowser(screen_rows, 21, 0, 0, color_map);
+    fb->drawMenu();
 	std::vector<std::shared_ptr<dialog::DialogElement>> el;
 
     std::vector<std::string> test {"tetsing", "test"};
@@ -326,11 +324,9 @@ int main() {
     el.push_back(std::make_shared<dialog::InputElement>(1));
     el.push_back(std::make_shared<dialog::StringElement>("string test", 11));
 
-
-
 	dialog::Dialog * dia = new dialog::Dialog(el);
 	focused = dia;
-	logMessage("Created editor and fileviewer objects");
+	logMessage("Created editor and filebrowser objects");
 	update_panels();
 	doupdate();
 
