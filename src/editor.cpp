@@ -99,7 +99,7 @@ namespace editor {
         char* out = new char[line_num_width];
         int max = std::min(window_height, static_cast<int>(strs.size()));
 
-        wattron(win, COLOR_PAIR(lineNumbersColor));
+        wattron(border_win, COLOR_PAIR(lineNumbersColor));
 
         for(int i = scroll_offset + 1; i <= scroll_offset + max; i++){
             // create a right-padded string for the line number
@@ -108,7 +108,7 @@ namespace editor {
             mvwaddnstr(Window::border_win, i, 1, out, line_num_width);
         }
 
-        wattroff(win, COLOR_PAIR(lineNumbersColor));
+        wattroff(border_win, COLOR_PAIR(lineNumbersColor));
 
         // no mem-leaks pls
         delete out;
