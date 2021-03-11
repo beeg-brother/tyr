@@ -13,7 +13,9 @@
 #include <string>
 #include <thread>
 #include <filesystem>
+// TODO: replace all vectors with lists?
 #include <vector>
+#include <list>
 #include <assert.h>
 #include <fstream>
 #include <zmq.hpp>
@@ -140,7 +142,8 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
 			if (line.size() != 0){
 				int colon_index = line.find(':');
 				color_map[line.substr(0,colon_index)] = stoi(line.substr(colon_index + 1));
-				logMessage(line.substr(0, colon_index) + " = " + std::to_string(color_map.at(line.substr(0, colon_index))));
+				logMessage(line.substr(0, colon_index) + " = " +
+				           std::to_string(color_map.at(line.substr(0, colon_index))));
 			}
 		}
 	}
@@ -160,10 +163,13 @@ std::map<std::string,int> theme_setup(std::map<std::string, std::string> config_
 
 int screen_rows, screen_cols;
 
+// when working with window_list, front()/begin() should be treated as the currently focused window
+// TODO: do these need to be pointers?
+std::list<window::Window *> window_list;
 
 editor::Editor *ed;
 filebrowser::FileBrowser *fb;
-window::Window *focused;
+std::list<window::Window *>::iterator focused;
 
 // TODO: make mainLoop deal with sending input to the right window.... :(
 void mainLoop(){
@@ -175,7 +181,7 @@ void mainLoop(){
 //		        focused->deFocus();
 //
 //		}
-		focused->handleInput(c);
+        (*focused)->handleInput(c);
 	};
 }
 
@@ -316,7 +322,8 @@ int main() {
 	ed = new editor::Editor(screen_rows, screen_cols-20, 0, 20, std::filesystem::path("example"));
 	fb = new filebrowser::FileBrowser(screen_rows, 21, 0, 0, color_map);
     fb->drawMenu();
-	std::vector<std::shared_ptr<dialog::DialogElement>> el;
+    logMessage("Created editor and filebrowser objects");
+    std::vector<std::shared_ptr<dialog::DialogElement>> el;
 
     std::vector<std::string> test {"tetsing", "test"};
     std::vector<std::string> test2 {"tetsing2", "test2"};
@@ -325,8 +332,14 @@ int main() {
     el.push_back(std::make_shared<dialog::StringElement>("string test", 11));
 
 	dialog::Dialog * dia = new dialog::Dialog(el);
-	focused = dia;
-	logMessage("Created editor and filebrowser objects");
+	logMessage("Created dialog element");
+
+	window_list.push_front(ed);
+	window_list.push_front(fb);
+	window_list.push_front(dia);
+	logMessage("Filled window_list");
+
+	focused = window_list.begin();
 	update_panels();
 	doupdate();
 

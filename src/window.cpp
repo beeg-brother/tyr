@@ -15,7 +15,7 @@ namespace window {
     // Each window has a border. To do this, a separate border window and panel are used.
     // Subclasses are allowed to define the way the outer border offset works. See create_windows.
 
-    // TODO: possibly all these variables are extraneous/should be Window::<var> but requires research
+    /*
     // width and height of the window, but these aren't properly updated yet (resize not yet implemented)
     int width, height;
     // the PANEL the window resides in, allowing for easy stacking
@@ -26,6 +26,7 @@ namespace window {
     PANEL *border_pan;
     // the WINDOW the outer border is written to
     WINDOW *border_win;
+     */
 
     // handles any input characters from the user
     // certain characters are intercepted by the top-level logic:
@@ -80,4 +81,6 @@ namespace window {
                 (ACS_LLCORNER | attrs),
                 (ACS_LRCORNER | attrs));
     }
+
+    // TODO: create place_cursor method?
 }
