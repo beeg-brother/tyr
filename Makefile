@@ -11,8 +11,11 @@ clean:
 	rm -f tyr
 	rm -f $(OBJDIR)/*
 
-tyr: $(OBJDIR)/dialog.o $(OBJDIR)/editor.o $(OBJDIR)/filebrowser.o $(OBJDIR)/window.o
+tyr: $(SRCDIR)/tyr.cpp $(OBJDIR)/dialog.o $(OBJDIR)/editor.o $(OBJDIR)/filebrowser.o $(OBJDIR)/window.o
 	$(CC) -o tyr $(SRCDIR)/tyr.cpp $(LIBS) $(OBJDIR)/dialog.o $(OBJDIR)/editor.o $(OBJDIR)/filebrowser.o $(OBJDIR)/window.o
+
+test: test.cpp
+	$(CC) test.cpp $(LIBS) $(CFLAGS)
 
 $(OBJDIR)/dialog.o: $(SRCDIR)/dialog.cpp $(SRCDIR)/constants.h $(SRCDIR)/dialog.h $(SRCDIR)/window.h
 	$(CC) $(SRCDIR)/dialog.cpp -o $(OBJDIR)/dialog.o $(CFLAGS)
