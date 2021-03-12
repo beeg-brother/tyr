@@ -165,7 +165,7 @@ editor::Editor *ed;
 filebrowser::FileBrowser *fb;
 window::Window *focused;
 
-// TODO: make mainLoop deal with sending input to the right window.... :(
+// TODO: window switching
 void mainLoop(){
 	int c;
 	while(1){
@@ -325,7 +325,7 @@ int main() {
     el.push_back(std::make_shared<dialog::StringElement>("string test", 11));
 
 	dialog::Dialog * dia = new dialog::Dialog(el);
-	focused = dia;
+	focused = ed;
 	logMessage("Created editor and filebrowser objects");
 	update_panels();
 	doupdate();

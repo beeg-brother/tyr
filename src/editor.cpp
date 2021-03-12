@@ -13,6 +13,8 @@
 
 namespace editor {
 
+    /*
+    // TODO: rewrite to use a list instead of a vector
     // vector of strings in memory
     std::vector<std::string> strs;
 
@@ -27,6 +29,7 @@ namespace editor {
     int window_height;
 
     std::filesystem::path filepath;
+    */
 
 
     Editor::Editor(int h, int w, int y0, int x0){
