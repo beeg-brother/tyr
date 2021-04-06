@@ -15,7 +15,7 @@ tyr: $(SRCDIR)/tyr.cpp $(OBJDIR)/dialog.o $(OBJDIR)/editor.o $(OBJDIR)/filebrows
 	$(CC) -o tyr $(SRCDIR)/tyr.cpp $(LIBS) $(OBJDIR)/dialog.o $(OBJDIR)/editor.o $(OBJDIR)/filebrowser.o $(OBJDIR)/window.o
 
 test: test.cpp
-	$(CC) test.cpp $(LIBS) $(CFLAGS)
+	$(CC) test.cpp $(LIBS) --std=c++17
 
 $(OBJDIR)/dialog.o: $(SRCDIR)/dialog.cpp $(SRCDIR)/constants.h $(SRCDIR)/dialog.h $(SRCDIR)/window.h
 	$(CC) $(SRCDIR)/dialog.cpp -o $(OBJDIR)/dialog.o $(CFLAGS)

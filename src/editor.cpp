@@ -234,6 +234,7 @@ namespace editor {
                 rewrite();
 
                 break;
+            case 127:
             case KEY_BACKSPACE: // BACKSPACE KEY
                 if(cursor.line_position == 0){
                     // if at the start of a line, we have to combine two lines
@@ -250,12 +251,12 @@ namespace editor {
                 } else {
                     // if we're not at the start of a line, just remove the previous character
                     strs[cursor.line_num].erase(cursor.line_position - 1, 1);
-                    cursor.screen_x -=1;
+                    wclrtoeol(win);
+                    cursor.screen_x -= 1;
                     cursor.line_position -= 1;
                     // clear the line, then redraw it to update all characters
-                    mvwaddstr(win, cursor.screen_y, 0, std::string(window_width, ' ').data());
                     wattron(win, COLOR_PAIR(textColor));
-                    mvwaddnstr(win, cursor.screen_y, 0, strs[cursor.line_num].data(), window_width);
+                    mvwaddnstr(win, cursor.screen_y, cursor.screen_x, strs[cursor.line_num].substr(cursor.line_position).data(), window_width);
                     wattroff(win, COLOR_PAIR(textColor));
                 }
                 break;
